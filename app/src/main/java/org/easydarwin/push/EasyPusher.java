@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2013-2016 EasyDarwin.ORG.  All rights reserved.
+	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
 	Github: https://github.com/EasyDarwin
 	WEChat: EasyDarwin
 	Website: http://www.easydarwin.org
@@ -73,7 +73,7 @@ public class EasyPusher {
     }
 
     public synchronized void initPush(final String serverIP, final String serverPort, final String streamName, final Context context, final OnInitPusherCallback callback) {
-        String key = "6A34714D6C3536526D34324150455A58714C6E4345755A76636D63755A57467A65575268636E64706269356C59584E356348567A61475679567778576F50365334456468646D6C754A6B4A68596D397A595541794D4445325257467A65555268636E6470626C526C5957316C59584E35";
+        String key = "6A36334A743536526D343041737268597030644E70666868626D527962326C6B567778576F502B6C34456468646D6C754A6B4A68596D397A595541794D4445325257467A65555268636E6470626C526C5957316C59584E35";
         mPusherObj = init(serverIP, serverPort, streamName, key, context, callback);
     }
 

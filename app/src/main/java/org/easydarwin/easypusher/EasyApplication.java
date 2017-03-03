@@ -1,3 +1,9 @@
+/*
+	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
+	Github: https://github.com/EasyDarwin
+	WEChat: EasyDarwin
+	Website: http://www.easydarwin.org
+*/
 package org.easydarwin.easypusher;
 
 import android.app.Application;
@@ -18,9 +24,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Created by Helong on 16/4/16-12:54.
- */
 public class EasyApplication extends Application {
 
     private static EasyApplication mApplication;

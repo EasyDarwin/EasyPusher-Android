@@ -1,3 +1,9 @@
+/*
+	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
+	Github: https://github.com/EasyDarwin
+	WEChat: EasyDarwin
+	Website: http://www.easydarwin.org
+*/
 package org.easydarwin.push;
 
 import android.content.Context;
@@ -31,9 +37,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 
-/**
- * Created by Helong on 16/4/16-14:05.
- */
 public class MediaStream {
 
     private static final boolean VERBOSE = BuildConfig.DEBUG;

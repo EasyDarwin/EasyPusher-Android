@@ -1,3 +1,9 @@
+/*
+	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
+	Github: https://github.com/EasyDarwin
+	WEChat: EasyDarwin
+	Website: http://www.easydarwin.org
+*/
 package org.easydarwin.updatemgr;
 
 import android.app.AlertDialog;
@@ -21,9 +27,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-/**
- * Created by kim on 2016/8/25.
- */
 public class UpdateMgr {
     private static final String TAG = "UpdateMgr";
     private Context mContext;
