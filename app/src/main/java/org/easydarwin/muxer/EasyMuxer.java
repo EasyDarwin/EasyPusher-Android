@@ -1,5 +1,10 @@
 package org.easydarwin.muxer;
-
+/*
+	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
+	Github: https://github.com/EasyDarwin
+	WEChat: EasyDarwin
+	Website: http://www.easydarwin.org
+*/
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
