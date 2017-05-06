@@ -6,16 +6,14 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
-import android.os.Build;
 import android.util.Log;
 import android.os.Process;
 
 import org.easydarwin.easypusher.BuildConfig;
+import org.easydarwin.easyrtmp.push.EasyRTMP;
 import org.easydarwin.muxer.EasyMuxer;
-import org.easydarwin.push.EasyPusher;
+import org.easydarwin.push.Pusher;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.ByteBuffer;
 
 public class AudioStream {
@@ -26,7 +24,7 @@ public class AudioStream {
     int mSamplingRateIndex = 0;
     AudioRecord mAudioRecord;
     MediaCodec mMediaCodec;
-    EasyPusher easyPusher;
+    Pusher easyPusher;
     private Thread mThread = null;
     String TAG = "EasyPusher";
     //final String path = Environment.getExternalStorageDirectory() + "/123450001.aac";
@@ -55,7 +53,7 @@ public class AudioStream {
             -1, // 15
     };
 
-    public AudioStream(EasyPusher easyPusher, EasyMuxer muxer) {
+    public AudioStream(Pusher easyPusher, EasyMuxer muxer) {
         this.easyPusher = easyPusher;
         this.muxer = muxer;
         int i = 0;

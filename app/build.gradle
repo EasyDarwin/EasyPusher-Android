@@ -20,7 +20,11 @@ android {
     dataBinding {
         enabled = true
     }
-
+    productFlavors {
+        rtsp {
+            applicationId "org.easydarwin.easypusher"
+        }
+    }
 
     android.applicationVariants.all { variant ->
         def file = variant.outputs[0].outputFile

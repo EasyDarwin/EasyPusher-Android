@@ -43,7 +43,15 @@ public class SettingActivity extends AppCompatActivity {
         final EditText txtIp = (EditText) findViewById(R.id.edt_server_address);
         final EditText txtPort = (EditText) findViewById(R.id.edt_server_port);
         final EditText txtId = (EditText) findViewById(R.id.edt_stream_id);
-
+        final View rtspGroup = findViewById(R.id.rtsp_group);
+        final EditText rtmpUrl = (EditText) findViewById(R.id.rtmp_url);
+        if (BuildConfig.FLAVOR.equals("rtmp")) {
+            rtspGroup.setVisibility(View.GONE);
+            rtmpUrl.setVisibility(View.VISIBLE);
+        }else{
+            rtspGroup.setVisibility(View.VISIBLE);
+            rtmpUrl.setVisibility(View.GONE);
+        }
         String ip = EasyApplication.getEasyApplication().getIp();
         String port = EasyApplication.getEasyApplication().getPort();
         String id = EasyApplication.getEasyApplication().getId();
@@ -52,6 +60,7 @@ public class SettingActivity extends AppCompatActivity {
         txtPort.setText(port);
         txtId.setText(id);
 
+        rtmpUrl.setText(EasyApplication.getEasyApplication().getUrl());
         Button btnSave = (Button) findViewById(R.id.btn_save);
         btnSave.setOnClickListener(new View.OnClickListener() {
             @Override

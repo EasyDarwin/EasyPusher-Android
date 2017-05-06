@@ -9,7 +9,7 @@ package org.easydarwin.push;
 import android.content.Context;
 import android.util.Log;
 
-public class EasyPusher {
+public class EasyPusher implements Pusher{
     private static final String KEY = "6A36334A743536526D3430414567315A70764C747065354659584E355548567A614756795957356B636D39705A46634D5671442F7065424859585A7062695A4359574A76633246414D6A41784E6B566863336C4559584A33615735555A5746745A57467A65513D3D";
     private static String TAG = "EasyPusher";
 
@@ -67,15 +67,26 @@ public class EasyPusher {
      */
     private native void stopPush(long pusherObj);
 
-    public void stop() {
+    public synchronized void stop() {
         if (mPusherObj == 0) return;
         stopPush(mPusherObj);
         mPusherObj = 0;
     }
 
-    public synchronized void initPush(final String serverIP, final String serverPort, final String streamName, final Context context, final OnInitPusherCallback callback) {
+    @Override
+    public synchronized void initPush(String serverIP, String serverPort, String streamName, Context context, final InitCallback callback) {
         String key = KEY;
-        mPusherObj = init(serverIP, serverPort, streamName, key, context, callback);
+        mPusherObj = init(serverIP, serverPort, streamName, key, context, new OnInitPusherCallback() {
+            @Override
+            public void onCallback(int code) {
+                if (callback != null)callback.onCallback(code);
+            }
+        });
+    }
+
+    @Override
+    public void initPush(String url, Context context, InitCallback callback) {
+        throw new RuntimeException("not support");
     }
 
     public synchronized void push(byte[] data, int offset, int length, long timestamp, int type) {

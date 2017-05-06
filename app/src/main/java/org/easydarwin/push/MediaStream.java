@@ -15,6 +15,8 @@ import android.view.SurfaceHolder;
 
 import org.easydarwin.audio.AudioStream;
 import org.easydarwin.easypusher.BuildConfig;
+import org.easydarwin.easypusher.EasyApplication;
+import org.easydarwin.easyrtmp.push.EasyRTMP;
 import org.easydarwin.hw.EncoderDebugger;
 import org.easydarwin.hw.NV21Convertor;
 import org.easydarwin.muxer.EasyMuxer;
@@ -39,7 +41,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class MediaStream {
 
     private static final boolean VERBOSE = BuildConfig.DEBUG;
-    EasyPusher mEasyPusher;
+    Pusher mEasyPusher;
     static final String TAG = "EasyPusher";
     int width = 640, height = 480;
     int framerate, bitrate;
@@ -64,20 +66,24 @@ public class MediaStream {
     public MediaStream(Context context, SurfaceHolder holder) {
         mApplicationContext = context;
         mSurfaceHolderRef = new WeakReference(holder);
-        mEasyPusher = new EasyPusher();
+        if (EasyApplication.isRTMP())
+            mEasyPusher = new EasyRTMP();
+        else mEasyPusher = new EasyPusher();
     }
 
+    public void startStream(String url, InitCallback callback) {
+        mEasyPusher.initPush(url, mApplicationContext, callback);
+        pushStream = true;
+    }
+
+    public void startStream(String ip, String port, String id, InitCallback callback) {
+        mEasyPusher.initPush(ip, port, String.format("%s.sdp", id), mApplicationContext, callback);
+        pushStream = true;
+    }
 //    public void setCallback(EasyPusher.OnInitPusherCallback callback) {
 //        mEasyPusher.setOnInitPusherCallback(callback);
 //    }
 
-    private void initPusher(String ip, String port, String id, EasyPusher.OnInitPusherCallback callback) {
-        try {
-            mEasyPusher.initPush(ip, port, String.format("%s.sdp", id), mApplicationContext, callback);
-        } catch (Exception e) {
-            Log.i("", "");
-        }
-    }
 
     public void setDgree(int dgree) {
         mDgree = dgree;
@@ -198,7 +204,7 @@ public class MediaStream {
 
                 if (mDgree == 0) {
                     overlay.init(previewSize.height, previewSize.width, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
-                }else {
+                } else {
                     overlay.init(previewSize.width, previewSize.height, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
                 }
 //                overlay.init(previewSize.width, previewSize.height);
@@ -232,7 +238,7 @@ public class MediaStream {
                             }
                         }
 
-                        save2file(data,String.format("/sdcard/yuv_%d_%d.yuv",previewSize.height, previewSize.width));
+                        save2file(data, String.format("/sdcard/yuv_%d_%d.yuv", previewSize.height, previewSize.width));
                     }
                     if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_video_overlay", false)) {
                         String txt = String.format("drawtext=fontfile=" + mApplicationContext.getFileStreamPath("SIMYOU.ttf") + ": text='%s%s':x=(w-text_w)/2:y=H-60 :fontcolor=white :box=1:boxcolor=0x00000000@0.3", "EasyPusher", new SimpleDateFormat("yyyy-MM-ddHHmmss").format(new Date()));
@@ -315,7 +321,8 @@ public class MediaStream {
                                         System.arraycopy(mPpsSps, 0, h264, 0, mPpsSps.length);
                                         outputBuffer.get(h264, mPpsSps.length, bufferInfo.size);
                                         mEasyPusher.push(h264, 0, mPpsSps.length + bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
-                                        if (BuildConfig.DEBUG) Log.i(TAG,String.format("push video stamp:%d",bufferInfo.presentationTimeUs / 1000));
+                                        if (BuildConfig.DEBUG)
+                                            Log.i(TAG, String.format("push video stamp:%d", bufferInfo.presentationTimeUs / 1000));
 
                                     } else {
                                         outputBuffer.get(h264, 0, bufferInfo.size);
@@ -329,7 +336,8 @@ public class MediaStream {
                                         }
                                         mEasyPusher.push(h264, 0, bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
 
-                                        if (BuildConfig.DEBUG) Log.i(TAG,String.format("push video stamp:%d",bufferInfo.presentationTimeUs / 1000));
+                                        if (BuildConfig.DEBUG)
+                                            Log.i(TAG, String.format("push video stamp:%d", bufferInfo.presentationTimeUs / 1000));
                                     }
                                     mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
                                 }
@@ -676,10 +684,6 @@ Video bitrate 384 Kbps 2 Mbps 4 Mbps 10 Mbps
         return pushStream;
     }
 
-    public void startStream(String ip, String port, String id, EasyPusher.OnInitPusherCallback callback) {
-        initPusher(ip, port, id, callback);
-        pushStream = true;
-    }
 
     public void stopStream() {
         mEasyPusher.stop();

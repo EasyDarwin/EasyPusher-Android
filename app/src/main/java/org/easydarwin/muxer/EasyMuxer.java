@@ -8,6 +8,7 @@ import android.util.Log;
 
 import org.easydarwin.easypusher.BuildConfig;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -111,7 +112,7 @@ public class EasyMuxer {
                 mMuxer = null;
                 mVideoTrackIndex = mAudioTrackIndex = -1;
                 try {
-                    mMuxer = new MediaMuxer(mFilePath + "-" + index++ + ".mp4", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+                    mMuxer = new MediaMuxer(mFilePath + "-" + ++index + ".mp4", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
                     addTrack(mVideoFormat, true);
                     addTrack(mAudioFormat, false);
                 } catch (IOException e) {
@@ -132,6 +133,10 @@ public class EasyMuxer {
                         mMuxer.release();
                     } catch (IllegalStateException ex) {
                         ex.printStackTrace();
+                    }
+
+                    if (System.currentTimeMillis() - mBeginMillis <= 1500){
+                        new File(mFilePath + "-" + index + ".mp4").delete();
                     }
                 }
             }

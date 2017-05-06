@@ -22,4 +22,9 @@ public class Config {
     public static final String PREF_NAME = "easy_pref";
     public static final String K_RESOLUTION = "k_resolution";
 
+
+
+    public static final String SERVER_URL = "serverUrl";
+    public static final String DEFAULT_SERVER_URL = "rtmp://www.easydss.com/live/stream_"+String.valueOf((int) (Math.random() * 1000000 + 100000));
+
 }

@@ -20,7 +20,10 @@ import android.util.Log;
 import android.view.Surface;
 import android.view.WindowManager;
 
+import org.easydarwin.easyrtmp.push.EasyRTMP;
 import org.easydarwin.push.EasyPusher;
+import org.easydarwin.push.InitCallback;
+import org.easydarwin.push.Pusher;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -46,7 +49,7 @@ public class RecordService extends Service {
 
     private MediaCodec.BufferInfo mBufferInfo = new MediaCodec.BufferInfo();
 
-    static EasyPusher mEasyPusher;
+    static Pusher mEasyPusher;
     private Thread mPushThread;
     private byte[] mPpsSps;
 
@@ -101,37 +104,23 @@ public class RecordService extends Service {
         }
     }
 
-
-
-//    private void recordStop() {
-//        mIsQuit.set(true);
-//    }
-//
-//    private void recordStart() {
-//
-//        configureMedia();
-//        startVirtual();
-//        new Thread() {
-//            @Override
-//            public void run() {
-//                Log.e(TAG, "start startRecord");
-//                startRecord();
-//            }
-//        }.start();
-//    }
-
     private void startPush() {
         if (mPushThread != null) return;
         mPushThread = new Thread(){
             @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             @Override
             public void run() {
+                String url = null;
+                if (EasyApplication.isRTMP()) {mEasyPusher = new EasyRTMP();
+                    url = EasyApplication.getEasyApplication().getUrl() + "_s";
+                    mEasyPusher.initPush(url, getApplicationContext(), null);
+                }else{mEasyPusher = new EasyPusher();
+                    String ip = EasyApplication.getEasyApplication().getIp();
+                    String port = EasyApplication.getEasyApplication().getPort();
+                    String id = EasyApplication.getEasyApplication().getId();
+                    mEasyPusher.initPush(ip,port,String.format("%s_s.sdp", id),getApplicationContext(), null);
+                }
 
-                String ip = EasyApplication.getEasyApplication().getIp();
-                String port = EasyApplication.getEasyApplication().getPort();
-                String id = EasyApplication.getEasyApplication().getId();
-
-                mEasyPusher.initPush(ip,port,String.format("%s_s.sdp", id),getApplicationContext(), null);
                 while (mPushThread != null) {
                     int index = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 10000);
                     Log.i(TAG, "dequeue output buffer index=" + index);
@@ -202,8 +191,8 @@ public class RecordService extends Service {
             mMpj = mMpmngr.getMediaProjection(StreamActivity.mResultCode, StreamActivity.mResultIntent);
             StreamActivity.mResultCode = 0;
             StreamActivity.mResultIntent = null;
-
         }
+        if (mMpj == null) return;
         mVirtualDisplay = mMpj.createVirtualDisplay("record_screen", windowWidth, windowHeight, screenDensity,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR|DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC|DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION, mSurface, null, null);
     }

@@ -94,4 +94,17 @@ public class EasyApplication extends Application {
     }
 
 
+    public String getUrl() {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        String defValue = Config.DEFAULT_SERVER_URL;
+        String ip = sharedPreferences.getString(Config.SERVER_URL, defValue);
+        if (ip.equals(defValue)){
+            sharedPreferences.edit().putString(Config.SERVER_URL, defValue).apply();
+        }
+        return ip;
+    }
+
+    public static boolean isRTMP() {
+        return "rtmp".equals(BuildConfig.FLAVOR);
+    }
 }

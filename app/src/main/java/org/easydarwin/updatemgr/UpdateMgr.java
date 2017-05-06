@@ -13,6 +13,7 @@ import android.util.Log;
 
 import com.google.gson.Gson;
 
+import org.easydarwin.easypusher.EasyApplication;
 import org.easydarwin.easypusher.R;
 
 import java.io.IOException;
@@ -50,7 +51,9 @@ public class UpdateMgr {
             @Override
             public void run() {
                 try {
-                    String url="http://www.easydarwin.org/versions/easypusher/version.txt";
+                    String url= EasyApplication.isRTMP() ?
+                            "http://www.easydarwin.org/versions/easyrtmp/version.txt":
+                            "http://www.easydarwin.org/versions/easypusher/version.txt";
                     OkHttpClient client = new OkHttpClient();
                     Request request = new Request.Builder()
                             .url(url)
