@@ -1,9 +1,3 @@
-/*
-	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
-	Github: https://github.com/EasyDarwin
-	WEChat: EasyDarwin
-	Website: http://www.easydarwin.org
-*/
 package org.easydarwin.audio;
 
 import android.media.AudioFormat;
@@ -16,6 +10,7 @@ import android.os.Build;
 import android.util.Log;
 import android.os.Process;
 
+import org.easydarwin.easypusher.BuildConfig;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.push.EasyPusher;
 
@@ -33,7 +28,7 @@ public class AudioStream {
     MediaCodec mMediaCodec;
     EasyPusher easyPusher;
     private Thread mThread = null;
-    String TAG = "audio_stream";
+    String TAG = "EasyPusher";
     //final String path = Environment.getExternalStorageDirectory() + "/123450001.aac";
 
     protected MediaCodec.BufferInfo mBufferInfo = new MediaCodec.BufferInfo();
@@ -128,6 +123,7 @@ public class AudioStream {
                                 addADTStoPacket(mBuffer.array(), mBufferInfo.size + 7);
                                 mBuffer.flip();
                                 easyPusher.push(mBuffer.array(), 0, mBufferInfo.size + 7, mBufferInfo.presentationTimeUs / 1000, 0);
+                                if (BuildConfig.DEBUG) Log.i(TAG,String.format("push audio stamp:%d",mBufferInfo.presentationTimeUs / 1000));
                                 mMediaCodec.releaseOutputBuffer(index, false);
                                 break;
                             } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {

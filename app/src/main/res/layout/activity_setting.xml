@@ -66,11 +66,24 @@
         android:text="使用软编码" />
 
     <CheckBox
+        android:id="@+id/enable_video_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:checked="false"
+        android:text="叠加水印" />
+    <CheckBox
         android:id="@+id/enable_local_record"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:checked="false"
         android:text="同步本地录像（仅在硬编码情况下）" />
+
+    <Button
+        android:layout_width="match_parent"
+        android:text="录像文件时长"
+        android:id="@+id/record_file_millis"
+        android:onClick="onRecordFileMillis"
+        android:layout_height="wrap_content" />
 
     <Button
         android:layout_width="match_parent"

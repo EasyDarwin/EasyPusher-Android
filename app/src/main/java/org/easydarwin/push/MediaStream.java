@@ -1,9 +1,3 @@
-/*
-	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
-	Github: https://github.com/EasyDarwin
-	WEChat: EasyDarwin
-	Website: http://www.easydarwin.org
-*/
 package org.easydarwin.push;
 
 import android.content.Context;
@@ -25,14 +19,19 @@ import org.easydarwin.hw.EncoderDebugger;
 import org.easydarwin.hw.NV21Convertor;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
+import org.easydarwin.sw.TxtOverlay;
 import org.easydarwin.sw.X264Encoder;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -190,12 +189,29 @@ public class MediaStream {
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
             Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
             byte[] h264 = new byte[(int) (previewSize.width * previewSize.height * 1.5)];
+//            byte[] overlayYuv = new byte[(int) (previewSize.width * previewSize.height * 1.5)];
+            TxtOverlay overlay = new TxtOverlay(mApplicationContext);
+            int region = 0;
             try {
+                int xpos, ypos;
+
+
+                if (mDgree == 0) {
+                    overlay.init(previewSize.height, previewSize.width, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
+                }else {
+                    overlay.init(previewSize.width, previewSize.height, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
+                }
+//                overlay.init(previewSize.width, previewSize.height);
                 while (mConsumer != null) {
                     TimedBuffer tb;
 //                    Log.i(TAG, String.format("cache yuv:%d", yuvs.size()));
                     tb = yuvs.take();
                     byte[] data = tb.buffer;
+
+                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    String t = format.format(new Date());
+//                    data = overlayYuv;
+
                     long stamp = tb.time;
                     int[] outLen = new int[1];
                     if (mDgree == 0) {
@@ -215,6 +231,13 @@ public class MediaStream {
                                 yuvRotate(data, 1, previewSize.width, previewSize.height, 270);
                             }
                         }
+
+                        save2file(data,String.format("/sdcard/yuv_%d_%d.yuv",previewSize.height, previewSize.width));
+                    }
+                    if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_video_overlay", false)) {
+                        String txt = String.format("drawtext=fontfile=" + mApplicationContext.getFileStreamPath("SIMYOU.ttf") + ": text='%s%s':x=(w-text_w)/2:y=H-60 :fontcolor=white :box=1:boxcolor=0x00000000@0.3", "EasyPusher", new SimpleDateFormat("yyyy-MM-ddHHmmss").format(new Date()));
+                        txt = "EasyPusher " + new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
+                        overlay.overlay(data, txt);
                     }
                     int r = 0;
                     byte[] newBuf = null;
@@ -292,6 +315,8 @@ public class MediaStream {
                                         System.arraycopy(mPpsSps, 0, h264, 0, mPpsSps.length);
                                         outputBuffer.get(h264, mPpsSps.length, bufferInfo.size);
                                         mEasyPusher.push(h264, 0, mPpsSps.length + bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
+                                        if (BuildConfig.DEBUG) Log.i(TAG,String.format("push video stamp:%d",bufferInfo.presentationTimeUs / 1000));
+
                                     } else {
                                         outputBuffer.get(h264, 0, bufferInfo.size);
                                         if (System.currentTimeMillis() - timeStamp >= 3000) {
@@ -303,6 +328,8 @@ public class MediaStream {
                                             }
                                         }
                                         mEasyPusher.push(h264, 0, bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
+
+                                        if (BuildConfig.DEBUG) Log.i(TAG,String.format("push video stamp:%d",bufferInfo.presentationTimeUs / 1000));
                                     }
                                     mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
                                 }
@@ -318,8 +345,44 @@ public class MediaStream {
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            } finally {
+                overlay.release();
             }
         }
+    }
+
+    private void save2file(byte[] data, String path) {
+        if (true) return;
+        try {
+            FileOutputStream fos = new FileOutputStream(path, true);
+            fos.write(data);
+            fos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 根据Unicode编码完美的判断中文汉字和符号
+    private static boolean isChinese(char c) {
+        Character.UnicodeBlock ub = Character.UnicodeBlock.of(c);
+        if (ub == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS || ub == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS
+                || ub == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A || ub == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B
+                || ub == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION || ub == Character.UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS
+                || ub == Character.UnicodeBlock.GENERAL_PUNCTUATION) {
+            return true;
+        }
+        return false;
+    }
+
+    private int getTxtPixelLength(String txt, boolean zoomed) {
+        int length = 0;
+        int fontWidth = zoomed ? 16 : 8;
+        for (int i = 0; i < txt.length(); i++) {
+            length += isChinese(txt.charAt(i)) ? fontWidth * 2 : fontWidth;
+        }
+        return length;
     }
 
     /**
@@ -342,6 +405,7 @@ public class MediaStream {
             int size = previewSize.width * previewSize.height
                     * ImageFormat.getBitsPerPixel(previewFormat)
                     / 8;
+            mCamera.addCallbackBuffer(new byte[size]);
             mCamera.addCallbackBuffer(new byte[size]);
             mCamera.setPreviewCallbackWithBuffer(previewCallback);
 
@@ -383,15 +447,16 @@ public class MediaStream {
                 }
             }
 
+            long millis = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getInt("record_interval", 300000);
             if (!mSWCodec && PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_local_record", false)) {
-                mMuxer = new EasyMuxer(new File(recordPath, width + "x" + height).toString(), 300000);
+                mMuxer = new EasyMuxer(new File(recordPath, new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(new Date())).toString(), millis);
             }
             mConsumer = new Consumer();
             mConsumer.start();
 
             if (!mSWCodec) {
                 startMediaCodec();
-            }else{
+            } else {
             }
             audioStream = new AudioStream(mEasyPusher, mMuxer);
             audioStream.startRecord();

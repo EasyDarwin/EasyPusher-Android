@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
+	Copyright (c) 2013-2016 EasyDarwin.ORG.  All rights reserved.
 	Github: https://github.com/EasyDarwin
 	WEChat: EasyDarwin
 	Website: http://www.easydarwin.org
@@ -10,6 +10,7 @@ import android.content.Context;
 import android.util.Log;
 
 public class EasyPusher {
+    private static final String KEY = "6A36334A743536526D3430414567315A70764C747065354659584E355548567A614756795957356B636D39705A46634D5671442F7065424859585A7062695A4359574A76633246414D6A41784E6B566863336C4559584A33615735555A5746745A57467A65513D3D";
     private static String TAG = "EasyPusher";
 
     static {
@@ -73,7 +74,7 @@ public class EasyPusher {
     }
 
     public synchronized void initPush(final String serverIP, final String serverPort, final String streamName, final Context context, final OnInitPusherCallback callback) {
-        String key = "6A36334A743536526D343041737268597030644E70666868626D527962326C6B567778576F502B6C34456468646D6C754A6B4A68596D397A595541794D4445325257467A65555268636E6470626C526C5957316C59584E35";
+        String key = KEY;
         mPusherObj = init(serverIP, serverPort, streamName, key, context, callback);
     }
 

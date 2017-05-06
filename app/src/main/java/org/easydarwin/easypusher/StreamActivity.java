@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
+	Copyright (c) 2013-2016 EasyDarwin.ORG.  All rights reserved.
 	Github: https://github.com/EasyDarwin
 	WEChat: EasyDarwin
 	Website: http://www.easydarwin.org
@@ -227,6 +227,7 @@ public class StreamActivity extends AppCompatActivity implements SurfaceHolder.C
             mMediaStream = new MediaStream(getApplicationContext(), holder);
             File easyPusher = new File(Environment.getExternalStorageDirectory() + "/EasyPusher");
             easyPusher.mkdir();
+
             mMediaStream.setRecordPath(easyPusher.getPath());
             EasyApplication.sMS = mMediaStream;
 

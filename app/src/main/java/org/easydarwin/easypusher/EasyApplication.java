@@ -1,29 +1,24 @@
-/*
-	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
-	Github: https://github.com/EasyDarwin
-	WEChat: EasyDarwin
-	Website: http://www.easydarwin.org
-*/
 package org.easydarwin.easypusher;
 
 import android.app.Application;
 import android.content.SharedPreferences;
+import android.content.res.AssetManager;
 import android.hardware.Camera;
 import android.preference.PreferenceManager;
-import android.provider.MediaStore;
-import android.widget.ArrayAdapter;
 
 import org.easydarwin.config.Config;
 import org.easydarwin.push.MediaStream;
 import org.easydarwin.util.Util;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
-import java.util.Set;
 
+/**
+ * Created by Helong on 16/4/16-12:54.
+ */
 public class EasyApplication extends Application {
 
     private static EasyApplication mApplication;
@@ -36,13 +31,32 @@ public class EasyApplication extends Application {
         mApplication = this;
         if (Util.getSupportResolution(this).size() == 0) {
             StringBuilder stringBuilder = new StringBuilder();
-            Camera camera = Camera.open();
+            Camera camera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
             List<Camera.Size> supportedPreviewSizes = camera.getParameters().getSupportedPreviewSizes();
             for (Camera.Size str : supportedPreviewSizes) {
                 stringBuilder.append(str.width + "x" + str.height).append(";");
             }
             Util.saveSupportResolution(this, stringBuilder.toString());
             camera.release();
+        }
+
+        File youyuan = getFileStreamPath("SIMYOU.ttf");
+        if (!youyuan.exists()){
+            AssetManager am = getAssets();
+            try {
+                InputStream is = am.open("zk/SIMYOU.ttf");
+                FileOutputStream os = openFileOutput("SIMYOU.ttf", MODE_PRIVATE);
+                byte[] buffer = new byte[1024];
+                int len = 0;
+                while ((len = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, len);
+                }
+                os.close();
+                is.close();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

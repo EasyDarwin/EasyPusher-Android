@@ -1,9 +1,3 @@
-/*
-	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
-	Github: https://github.com/EasyDarwin
-	WEChat: EasyDarwin
-	Website: http://www.easydarwin.org
-*/
 package org.easydarwin.updatemgr;
 
 import android.app.AlertDialog;
@@ -17,9 +11,9 @@ import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.google.gson.Gson;
+
 import org.easydarwin.easypusher.R;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.IOException;
 
@@ -27,6 +21,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
+/**
+ * Created by kim on 2016/8/25.
+ */
 public class UpdateMgr {
     private static final String TAG = "UpdateMgr";
     private Context mContext;
@@ -44,6 +41,7 @@ public class UpdateMgr {
         mHandler = new Handler();
     }
 
+
     /**
      * 检测当前APP是否需要升级
      */
@@ -60,23 +58,19 @@ public class UpdateMgr {
                     Response response = client.newCall(request).execute();
                     if (response.isSuccessful()) {
                         String string = response.body().string();
-                        JSONObject obj = new JSONObject(string);
+                        RemoteVersionInfo versionInfo = new Gson().fromJson(string, RemoteVersionInfo.class);
 
-                        String versionCode = obj.optString("versionCode");
-                        String versionName= obj.optString("versionName");
-                        String versionUrl= obj.optString("url");
-
-                        if(TextUtils.isEmpty(versionUrl)){
+                        if(versionInfo == null || TextUtils.isEmpty(versionInfo.getUrl())){
                             return;
                         }
                         PackageManager packageManager=mContext.getPackageManager();
                         try {
                             PackageInfo packageInfo=packageManager.getPackageInfo(mContext.getPackageName(),0);
                             int localVersionCode=packageInfo.versionCode;
-                            int remoteVersionCode= Integer.valueOf(versionCode);
+                            int remoteVersionCode= Integer.valueOf(versionInfo.getVersionCode());
                             Log.d(TAG, "kim localVersionCode="+localVersionCode+", remoteVersionCode="+remoteVersionCode);
                             if(localVersionCode<remoteVersionCode){
-                                mApkUrl = versionUrl;
+                                mApkUrl = versionInfo.getUrl();
                                 mHandler.post(mShowDlg);
                             }
                         } catch (PackageManager.NameNotFoundException e) {
@@ -84,8 +78,6 @@ public class UpdateMgr {
                         }
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (JSONException e) {
                     e.printStackTrace();
                 }
             }

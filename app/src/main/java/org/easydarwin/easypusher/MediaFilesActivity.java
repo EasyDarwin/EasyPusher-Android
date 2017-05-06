@@ -1,9 +1,3 @@
-/*
-	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
-	Github: https://github.com/EasyDarwin
-	WEChat: EasyDarwin
-	Website: http://www.easydarwin.org
-*/
 package org.easydarwin.easypusher;
 
 import android.content.ActivityNotFoundException;
@@ -62,13 +56,13 @@ public class MediaFilesActivity extends AppCompatActivity {
 
             public Fragment getItem(int position) {
                 Bundle args = new Bundle();
-                args.putBoolean(LocalFileFragment.KEY_IS_RECORD, position == 1);
+                args.putBoolean(LocalFileFragment.KEY_IS_RECORD, position == 0);
                 return Fragment.instantiate(MediaFilesActivity.this, LocalFileFragment.class.getName(), args);
             }
 
             @Override
             public CharSequence getPageTitle(int position) {
-                return position == 0 ? "抓拍" : "录像";
+                return position == 0 ? "录像":"抓拍";
             }
         });
     }

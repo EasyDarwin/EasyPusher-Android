@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2012-2017 EasyDarwin.ORG.  All rights reserved.
+	Copyright (c) 2013-2016 EasyDarwin.ORG.  All rights reserved.
 	Github: https://github.com/EasyDarwin
 	WEChat: EasyDarwin
 	Website: http://www.easydarwin.org
@@ -24,6 +24,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -117,6 +118,17 @@ public class SettingActivity extends AppCompatActivity {
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
+
+
+        CheckBox enable_video_overlay = (CheckBox) findViewById(R.id.enable_video_overlay);
+        enable_video_overlay.setChecked(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("key_enable_video_overlay", false));
+
+        enable_video_overlay.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit().putBoolean("key_enable_video_overlay", isChecked).apply();
+            }
+        });
     }
 
     private void showToast(String message) {
@@ -125,5 +137,22 @@ public class SettingActivity extends AppCompatActivity {
 
     public void onOpenLocalRecord(View view) {
         startActivity(new Intent(this, MediaFilesActivity.class));
+    }
+
+    public void onRecordFileMillis(View view) {
+
+        View contentView = getLayoutInflater().inflate(R.layout.record_file_millis_dlg, null, false);
+        final NumberPicker np = (NumberPicker) contentView.findViewById(R.id.record_file_millis_picker);
+        np.setMaxValue(600);
+        np.setMinValue(10);
+
+        int record_interval = PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).getInt("record_interval", 300000);
+        np.setValue(record_interval/1000);
+        new AlertDialog.Builder(this).setView(contentView).setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit().putInt("record_interval", np.getValue() * 1000).apply();
+            }
+        }).setNegativeButton(android.R.string.cancel, null).show();
     }
 }
