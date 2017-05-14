@@ -6,8 +6,13 @@ import android.content.res.AssetManager;
 import android.hardware.Camera;
 import android.preference.PreferenceManager;
 
+import com.squareup.otto.Bus;
+import com.squareup.otto.ThreadEnforcer;
+
 import org.easydarwin.config.Config;
+import org.easydarwin.push.DaggerMuxerModule;
 import org.easydarwin.push.MediaStream;
+import org.easydarwin.push.MuxerModule;
 import org.easydarwin.util.Util;
 
 import java.io.File;
@@ -22,8 +27,10 @@ import java.util.List;
 public class EasyApplication extends Application {
 
     private static EasyApplication mApplication;
+    public static MuxerModule module;
 
     public static MediaStream sMS;
+    public static final Bus BUS = new Bus(ThreadEnforcer.ANY);
 
     @Override
     public void onCreate() {

@@ -8,8 +8,8 @@ android {
         applicationId "org.easydarwin.easypusher"
         minSdkVersion 16
         targetSdkVersion 22
-        versionCode 13
-        versionName "1.2.17.0504"
+        versionCode 14
+        versionName "1.2.17.0514"
     }
     buildTypes {
         release {
@@ -32,6 +32,7 @@ android {
     }
 }
 
+
 repositories {
     flatDir {
         dirs 'libs'
@@ -52,4 +53,7 @@ dependencies {
     compile 'com.umeng.analytics:analytics:latest.integration'
     compile 'com.android.support:cardview-v7:23.4.0'
     compile 'com.github.chrisbanes:PhotoView:1.3.0'
+    compile 'com.squareup:otto:1.3.8'
+    compile 'com.google.dagger:dagger:2.11-rc2'
+    annotationProcessor 'com.google.dagger:dagger-compiler:2.11-rc2'
 }

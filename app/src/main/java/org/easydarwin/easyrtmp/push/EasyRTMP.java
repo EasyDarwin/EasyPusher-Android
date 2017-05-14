@@ -7,6 +7,7 @@
 package org.easydarwin.easyrtmp.push;
 
 import android.content.Context;
+import android.util.Log;
 
 import org.easydarwin.push.InitCallback;
 import org.easydarwin.push.Pusher;
@@ -16,6 +17,9 @@ public class EasyRTMP implements Pusher {
     static {
         System.loadLibrary("easyrtmp");
     }
+
+    private int mTotal;
+    private long pPreviewTS;
 
     public interface OnInitPusherCallback {
         public void onCallback(int code);
@@ -90,6 +94,12 @@ public class EasyRTMP implements Pusher {
     }
 
     public synchronized void push(byte[] data, int offset, int length, long timestamp, int type){
+        mTotal += length;
+        if (System.currentTimeMillis() - pPreviewTS >= 1000){
+            Log.i(TAG, String.format("bps:%d", mTotal*1000/(System.currentTimeMillis() - pPreviewTS)));
+            pPreviewTS = System.currentTimeMillis();
+            mTotal = 0;
+        }
         if (mPusherObj == 0) return;
         push(mPusherObj, data, offset, length, timestamp,type);
     }
