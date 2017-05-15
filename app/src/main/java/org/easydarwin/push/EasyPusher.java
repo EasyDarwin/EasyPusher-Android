@@ -7,7 +7,12 @@
 package org.easydarwin.push;
 
 import android.content.Context;
+import android.provider.Settings;
 import android.util.Log;
+
+import org.easydarwin.bus.StreamStat;
+
+import static org.easydarwin.easypusher.EasyApplication.BUS;
 
 public class EasyPusher implements Pusher{
     private static final String KEY = "6A36334A743536526D3430414567315A70764C747065354659584E355548567A614756795957356B636D39705A46634D5671442F7065424859585A7062695A4359574A76633246414D6A41784E6B566863336C4559584A33615735555A5746745A57467A65513D3D";
@@ -16,6 +21,10 @@ public class EasyPusher implements Pusher{
     static {
         System.loadLibrary("easypusher");
     }
+
+    private long pPreviewTS;
+    private long mTotal;
+    private int mTotalFrms;
 
     public interface OnInitPusherCallback {
         public void onCallback(int code);
@@ -90,6 +99,21 @@ public class EasyPusher implements Pusher{
     }
 
     public synchronized void push(byte[] data, int offset, int length, long timestamp, int type) {
+        mTotal += length;
+        if (type == 1){
+            mTotalFrms++;
+        }
+        long interval = System.currentTimeMillis() - pPreviewTS;
+        if (interval >= 3000){
+            long bps = mTotal * 1000 / (interval);
+            long fps = mTotalFrms * 1000 / (interval);
+            Log.i(TAG, String.format("bps:%d, fps:%d", fps, bps));
+            pPreviewTS = System.currentTimeMillis();
+            mTotal = 0;
+            mTotalFrms = 0;
+
+            BUS.post(new StreamStat((int)fps, (int)bps));
+        }
         if (mPusherObj == 0) return;
         push(mPusherObj, data, offset, length, timestamp, type);
     }

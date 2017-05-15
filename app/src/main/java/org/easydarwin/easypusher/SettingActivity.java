@@ -108,7 +108,7 @@ public class SettingActivity extends AppCompatActivity {
 
 
         CheckBox x264enc = (CheckBox) findViewById(R.id.use_x264_encode);
-        x264enc.setChecked(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("key-sw-codec", MediaStream.useSWCodec()));
+        x264enc.setChecked(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("key-sw-codec", false));
 
         x264enc.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
