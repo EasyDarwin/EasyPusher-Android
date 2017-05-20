@@ -77,6 +77,7 @@ public class EasyPusher implements Pusher{
     private native void stopPush(long pusherObj);
 
     public synchronized void stop() {
+        Log.i(TAG, "PusherStop");
         if (mPusherObj == 0) return;
         stopPush(mPusherObj);
         mPusherObj = 0;
@@ -84,11 +85,16 @@ public class EasyPusher implements Pusher{
 
     @Override
     public synchronized void initPush(String serverIP, String serverPort, String streamName, Context context, final InitCallback callback) {
+        Log.i(TAG, "PusherStart");
         String key = KEY;
         mPusherObj = init(serverIP, serverPort, streamName, key, context, new OnInitPusherCallback() {
+            int code = Integer.MAX_VALUE;
             @Override
             public void onCallback(int code) {
-                if (callback != null)callback.onCallback(code);
+                if (code != this.code) {
+                    this.code = code;
+                    if (callback != null) callback.onCallback(code);
+                }
             }
         });
     }

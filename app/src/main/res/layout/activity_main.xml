@@ -64,7 +64,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentBottom="true"
-                android:text="推送摄像头"
+                android:text="推送"
                 android:background="@drawable/button_selector"
                 android:textColor="#ffffff" />
 

@@ -89,6 +89,12 @@
         android:layout_height="wrap_content"
         android:checked="false"
         android:text="同步本地录像（仅在硬编码情况下）" />
+    <CheckBox
+        android:id="@+id/only_push_audio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:checked="false"
+        android:text="仅推送音频" />
 
     <Button
         android:layout_width="match_parent"

@@ -10,7 +10,6 @@ import com.squareup.otto.Bus;
 import com.squareup.otto.ThreadEnforcer;
 
 import org.easydarwin.config.Config;
-import org.easydarwin.push.DaggerMuxerModule;
 import org.easydarwin.push.MediaStream;
 import org.easydarwin.push.MuxerModule;
 import org.easydarwin.util.Util;
@@ -26,6 +25,7 @@ import java.util.List;
  */
 public class EasyApplication extends Application {
 
+    public static final String KEY_ENABLE_VIDEO = "key-enable-video";
     private static EasyApplication mApplication;
     public static MuxerModule module;
 
@@ -36,6 +36,8 @@ public class EasyApplication extends Application {
     public void onCreate() {
         super.onCreate();
         mApplication = this;
+        // for compatibility
+        resetDefaultServer();
         if (Util.getSupportResolution(this).size() == 0) {
             StringBuilder stringBuilder = new StringBuilder();
             Camera camera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
@@ -64,6 +66,15 @@ public class EasyApplication extends Application {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void resetDefaultServer() {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        String defaultIP = sharedPreferences.getString(Config.SERVER_IP, Config.DEFAULT_SERVER_IP);
+        if ("114.55.107.180".equals(defaultIP)
+                || "121.40.50.44".equals(defaultIP)){
+            sharedPreferences.edit().putString(Config.SERVER_IP, Config.DEFAULT_SERVER_IP).apply();
         }
     }
 

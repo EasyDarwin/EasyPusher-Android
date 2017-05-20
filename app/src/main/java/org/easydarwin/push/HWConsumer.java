@@ -6,7 +6,6 @@ import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -16,15 +15,10 @@ import org.easydarwin.hw.NV21Convertor;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import javax.inject.Inject;
-
-import dagger.Component;
 
 import static org.easydarwin.easypusher.EasyApplication.module;
 

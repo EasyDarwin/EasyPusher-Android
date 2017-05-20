@@ -10,15 +10,11 @@ package org.easydarwin.easypusher;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.media.audiofx.PresetReverb;
-import android.media.projection.MediaProjectionManager;
-import android.os.Build;
+import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -29,8 +25,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.easydarwin.config.Config;
-import org.easydarwin.push.EasyPusher;
-import org.easydarwin.push.MediaStream;
 
 public class SettingActivity extends AppCompatActivity {
 
@@ -143,6 +137,16 @@ public class SettingActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit().putBoolean("key_enable_video_overlay", isChecked).apply();
+            }
+        });
+
+        CheckBox only_push_audio = (CheckBox) findViewById(R.id.only_push_audio);
+        only_push_audio.setChecked(!PreferenceManager.getDefaultSharedPreferences(this).getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true));
+
+        only_push_audio.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit().putBoolean(EasyApplication.KEY_ENABLE_VIDEO, !isChecked).apply();
             }
         });
     }

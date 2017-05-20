@@ -234,12 +234,12 @@ public class StreamActivity extends AppCompatActivity implements SurfaceHolder.C
 
     @Override
     public void surfaceCreated(final SurfaceHolder holder) {
-
-        final File easyPusher = new File(Environment.getExternalStorageDirectory() + (EasyApplication.isRTMP()?"/EasyRTMP":"/EasyPusher"));
+        final File easyPusher = new File(Environment.getExternalStorageDirectory() + (EasyApplication.isRTMP()?"/EasyRTMP"
+                :"/EasyPusher"));
         easyPusher.mkdir();
         if (EasyApplication.sMS == null) {
-            mMediaStream = new MediaStream(getApplicationContext(), holder);
-
+            mMediaStream = new MediaStream(getApplicationContext(), holder, PreferenceManager.getDefaultSharedPreferences(this)
+                    .getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true));
             mMediaStream.setRecordPath(easyPusher.getPath());
             EasyApplication.sMS = mMediaStream;
 
@@ -252,15 +252,20 @@ public class StreamActivity extends AppCompatActivity implements SurfaceHolder.C
                     service.stopMySelf();
 
                     mMediaStream = EasyApplication.sMS;
+                    mMediaStream.release();
+                    EasyApplication.sMS = mMediaStream = null;
+                    mMediaStream = new MediaStream(getApplicationContext(), holder, PreferenceManager.getDefaultSharedPreferences(StreamActivity.this)
+                            .getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true));
+                    EasyApplication.sMS = mMediaStream;
                     mMediaStream.setSurfaceHolder(holder);
                     startCamera();
 
+                    findViewById(R.id.btn_switch).performClick();
                     unbindService(this);
                 }
 
                 @Override
                 public void onServiceDisconnected(ComponentName componentName) {
-
                 }
             }, 0);
         }

@@ -82,9 +82,13 @@ public class EasyRTMP implements Pusher {
     public synchronized void initPush(final String url, final Context context, final InitCallback callback) {
         String key = "79397037795A36526D3430416E667059707756686B756876636D63755A57467A65575268636E64706269356C59584E35636E52746346634D5671442B6B75424859585A7062695A4359574A76633246414D6A41784E6B566863336C4559584A33615735555A5746745A57467A65513D3D";
         mPusherObj = init(url, key, context, new OnInitPusherCallback() {
+            int code = Integer.MAX_VALUE;
             @Override
             public void onCallback(int code) {
-                if (callback != null)callback.onCallback(code);
+                if (code != this.code) {
+                    this.code = code;
+                    if (callback != null) callback.onCallback(code);
+                }
             }
         });
     }
