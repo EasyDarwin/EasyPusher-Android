@@ -338,6 +338,8 @@ public class MediaStream {
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();
+            }catch (IllegalArgumentException ex){
+                ex.printStackTrace();
             }
         }
         audioStream = new AudioStream(mEasyPusher);
