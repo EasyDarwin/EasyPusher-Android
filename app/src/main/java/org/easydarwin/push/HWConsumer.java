@@ -117,6 +117,7 @@ public class HWConsumer extends Thread implements VideoConsumer {
                 // no output available yet
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 // not expected for an encoder
+                outputBuffers = mMediaCodec.getOutputBuffers();
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 EasyMuxer muxer = mMuxer;
                 if (muxer != null) {
@@ -133,7 +134,8 @@ public class HWConsumer extends Thread implements VideoConsumer {
                 }else{
                     outputBuffer = outputBuffers[outputBufferIndex];
                 }
-
+                outputBuffer.position(bufferInfo.offset);
+                outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
                 EasyMuxer muxer = mMuxer;
                 if (muxer != null) {
                     muxer.pumpStream(outputBuffer, bufferInfo, true);
