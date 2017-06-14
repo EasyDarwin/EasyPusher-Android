@@ -10,6 +10,7 @@ import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
@@ -40,7 +41,7 @@ import org.easydarwin.easyrtmp.push.EasyRTMP;
 import org.easydarwin.push.EasyPusher;
 import org.easydarwin.push.InitCallback;
 import org.easydarwin.push.MediaStream;
-import org.easydarwin.updatemgr.UpdateMgr;
+import org.easydarwin.update.UpdateMgr;
 import org.easydarwin.util.Util;
 
 import java.io.File;
@@ -48,6 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.easydarwin.easypusher.EasyApplication.BUS;
+import static org.easydarwin.update.UpdateMgr.MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE;
 
 public class StreamActivity extends AppCompatActivity implements View.OnClickListener, TextureView.SurfaceTextureListener {
 
@@ -66,6 +68,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     TextView txtStatus, streamStat;
     static Intent mResultIntent;
     static int mResultCode;
+    private UpdateMgr update;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,16 +120,31 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
             }
         }
 
-        UpdateMgr update = new UpdateMgr(this);
-        update.checkUpdate();
 
         if (EasyApplication.isRTMP()) {
             findViewById(R.id.toolbar_about).setVisibility(View.GONE);
         }
 
         BUS.register(this);
+        String url = "http://www.easydarwin.org/versions/easypusher/version.txt";
+
+        update = new UpdateMgr(this);
+        update.checkUpdate(url);
     }
 
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE:
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    update.doDownload();
+                }
+        }
+    }
     private void startScreenPushIntent() {
         if (StreamActivity.mResultIntent != null && StreamActivity.mResultCode != 0) {
             Intent intent = new Intent(getApplicationContext(), RecordService.class);
