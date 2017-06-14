@@ -219,7 +219,7 @@ public class MediaStream {
         } else {
             long millis = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getInt("record_interval", 300000);
             if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_local_record", false)) {
-                mMuxer = new EasyMuxer(new File(recordPath, new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(new Date())).toString(), millis);
+                mMuxer = new EasyMuxer(new File(recordPath, new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date())).toString(), millis);
             } else {
                 mMuxer = null;
             }
@@ -496,9 +496,12 @@ public class MediaStream {
             try {
                 mCamera.release();
             } catch (Exception e) {
-
             }
             mCamera = null;
+        }
+        if (mMuxer != null){
+            mMuxer.release();
+            mMuxer = null;
         }
     }
 
