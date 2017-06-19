@@ -112,7 +112,7 @@ public class HWConsumer extends Thread implements VideoConsumer {
         byte[] mPpsSps = new byte[0];
         byte[]h264 = new byte[mWidth*mHeight];
         do {
-            outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, 30000);
+            outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, 10000);
             if (outputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
                 // no output available yet
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {

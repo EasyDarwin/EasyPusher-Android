@@ -110,6 +110,7 @@ public class EasyPusher implements Pusher{
     }
 
     public synchronized void push(byte[] data, int offset, int length, long timestamp, int type) {
+        if (mPusherObj == 0) return;
         mTotal += length;
         if (type == 1){
             mTotalFrms++;
@@ -125,13 +126,11 @@ public class EasyPusher implements Pusher{
 
             BUS.post(new StreamStat((int)fps, (int)bps));
         }
-        if (mPusherObj == 0) return;
         push(mPusherObj, data, offset, length, timestamp, type);
     }
 
     public synchronized void push(byte[] data, long timestamp, int type) {
-        if (mPusherObj == 0) return;
-        push(mPusherObj, data, 0, data.length, timestamp, type);
+        push( data, 0, data.length, timestamp, type);
     }
 }
 

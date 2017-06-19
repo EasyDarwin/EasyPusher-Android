@@ -26,7 +26,7 @@ public class EasyApplication extends Application {
     private static EasyApplication mApplication;
     public static MuxerModule module;
 
-    public static MediaStream sMS;
+
     public static final Bus BUS = new Bus(ThreadEnforcer.ANY);
 
     @Override

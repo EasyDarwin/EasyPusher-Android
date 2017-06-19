@@ -69,6 +69,8 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     static Intent mResultIntent;
     static int mResultCode;
     private UpdateMgr update;
+    private BackgroundCameraService mService;
+    private ServiceConnection conn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -130,6 +132,36 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
 
         update = new UpdateMgr(this);
         update.checkUpdate(url);
+
+
+
+        // create background service for background use.
+        Intent intent = new Intent(this, BackgroundCameraService.class);
+        startService(intent);
+
+        conn = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+                mService = ((BackgroundCameraService.LocalBinder) iBinder).getService();
+//                mMediaStream = EasyApplication.sMS;
+
+
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName componentName) {
+            }
+        };
+        bindService(new Intent(this, BackgroundCameraService.class), conn, 0);
+
+
+//        if (mMediaStream != null){
+//            stopService(new Intent(this, BackgroundCameraService.class));
+//            mMediaStream.setSurfaceTexture(surface);
+//            mMediaStream.createCamera();
+//            mMediaStream.startPreview();
+//            return;
+//        }
     }
 
 
@@ -427,6 +459,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     @Override
     protected void onDestroy() {
         BUS.unregister(this);
+        unbindService(conn);
         super.onDestroy();
         handler.removeCallbacksAndMessages(null);
     }
@@ -485,42 +518,29 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         final File easyPusher = new File(Environment.getExternalStorageDirectory() + (EasyApplication.isRTMP() ? "/EasyRTMP"
                 : "/EasyPusher"));
         easyPusher.mkdir();
-        if (mMediaStream != null){
-            mMediaStream.setSurfaceTexture(surface);
-            mMediaStream.createCamera();
-            mMediaStream.startPreview();
-            return;
-        }
-        if (EasyApplication.sMS == null) {
-            mMediaStream = new MediaStream(getApplicationContext(), surface, PreferenceManager.getDefaultSharedPreferences(this)
-                    .getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true));
-            mMediaStream.setRecordPath(easyPusher.getPath());
-            EasyApplication.sMS = mMediaStream;
+        MediaStream ms = mService.getMediaStream();
+        if (ms != null) {    // switch from background to front
+            ms.stopPreview();
+            ms.setSurfaceTexture(surface);
+            ms.startPreview();
+            mMediaStream = ms;
 
-            startCamera();
+            if (ms.isStreaming()) {
+                String ip = EasyApplication.getEasyApplication().getIp();
+                String port = EasyApplication.getEasyApplication().getPort();
+                String id = EasyApplication.getEasyApplication().getId();
+                String url = String.format("rtsp://%s:%s/%s.sdp", ip, port, id);
+                btnSwitch.setText("停止");
+                txtStreamAddress.setText(url);
+                sendMessage("推流中");
+            }
         } else {
-            bindService(new Intent(this, BackgroundCameraService.class), new ServiceConnection() {
-                @Override
-                public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-                    BackgroundCameraService service = ((BackgroundCameraService.LocalBinder) iBinder).getService();
-                    service.stopMySelf();
-
-                    mMediaStream = EasyApplication.sMS;
-                    mMediaStream.release();
-                    EasyApplication.sMS = mMediaStream = null;
-                    mMediaStream = new MediaStream(getApplicationContext(), surface, PreferenceManager.getDefaultSharedPreferences(StreamActivity.this)
-                            .getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true));
-                    EasyApplication.sMS = mMediaStream;
-                    startCamera();
-
-                    findViewById(R.id.btn_switch).performClick();
-                    unbindService(this);
-                }
-
-                @Override
-                public void onServiceDisconnected(ComponentName componentName) {
-                }
-            }, 0);
+            ms = new MediaStream(getApplicationContext(), surface, PreferenceManager.getDefaultSharedPreferences(this)
+                    .getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true));
+            ms.setRecordPath(easyPusher.getPath());
+            mMediaStream = ms;
+            startCamera();
+            mService.setMediaStream(ms);
         }
     }
 
@@ -533,17 +553,24 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
         boolean isStreaming = mMediaStream != null && mMediaStream.isStreaming();
         mMediaStream.stopPreview();
-        mMediaStream.destroyCamera();
-        if (isFinishing())
+        if (isFinishing()) {
             if (isStreaming && PreferenceManager.getDefaultSharedPreferences(StreamActivity.this)
                     .getBoolean("key_enable_background_camera", true)) {
-                startService(new Intent(StreamActivity.this, BackgroundCameraService.class));
+                // active background streaming
+                mService.activePreview();
             } else {
                 mMediaStream.stopStream();
-                EasyApplication.sMS = null;
                 mMediaStream.release();
                 mMediaStream = null;
+
+                stopService(new Intent(this, BackgroundCameraService.class));
             }
+        }else {
+            if (isStreaming) {
+                // active background streaming
+                mService.activePreview();
+            }
+        }
         return true;
     }
 
