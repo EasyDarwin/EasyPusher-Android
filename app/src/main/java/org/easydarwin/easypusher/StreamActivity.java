@@ -530,6 +530,9 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                 String port = EasyApplication.getEasyApplication().getPort();
                 String id = EasyApplication.getEasyApplication().getId();
                 String url = String.format("rtsp://%s:%s/%s.sdp", ip, port, id);
+                if (EasyApplication.isRTMP()){
+                    url = EasyApplication.getEasyApplication().getUrl();
+                }
                 btnSwitch.setText("停止");
                 txtStreamAddress.setText(url);
                 sendMessage("推流中");
