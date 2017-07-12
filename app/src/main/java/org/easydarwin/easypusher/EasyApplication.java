@@ -24,7 +24,6 @@ public class EasyApplication extends Application {
 
     public static final String KEY_ENABLE_VIDEO = "key-enable-video";
     private static EasyApplication mApplication;
-    public static MuxerModule module;
 
     public static MediaStream sMS;
     public static final Bus BUS = new Bus(ThreadEnforcer.ANY);

@@ -5,9 +5,7 @@ import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.media.MediaCodec;
-import android.media.MediaFormat;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -16,7 +14,6 @@ import android.os.Process;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.util.Log;
-import android.view.SurfaceHolder;
 
 import org.easydarwin.audio.AudioStream;
 import org.easydarwin.easypusher.BuildConfig;
@@ -27,7 +24,6 @@ import org.easydarwin.hw.NV21Convertor;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
 import org.easydarwin.sw.TxtOverlay;
-import org.easydarwin.sw.X264Encoder;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -36,12 +32,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
-import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
 
 import dagger.Module;
 import dagger.Provides;
@@ -84,8 +78,6 @@ public class MediaStream {
         if (EasyApplication.isRTMP())
             mEasyPusher = new EasyRTMP();
         else mEasyPusher = new EasyPusher();
-
-        EasyApplication.module = DaggerMuxerModule.builder().mediaStream(this).build();
         mCameraThread = new HandlerThread("CAMERA"){
             public void run(){
                 try{
@@ -210,24 +202,9 @@ public class MediaStream {
         if (!enanleVideo) {
             return;
         }
-
-
-        mSWCodec = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key-sw-codec", false);
-        if (mSWCodec) {
-            mMuxer = null;
-            mVC = new SWConsumer(mApplicationContext, mEasyPusher);
-        } else {
-            long millis = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getInt("record_interval", 300000);
-            if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_local_record", false)) {
-                mMuxer = new EasyMuxer(new File(recordPath, new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date())).toString(), millis);
-            } else {
-                mMuxer = null;
-            }
-            mVC = new HWConsumer(mApplicationContext, mEasyPusher);
-        }
         try {
+            mSWCodec = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key-sw-codec", false);
             mCamera = Camera.open(mCameraId);
-
             Camera.Parameters parameters = mCamera.getParameters();
             int[] max = determineMaximumSupportedFramerate(parameters);
             Camera.CameraInfo camInfo = new Camera.CameraInfo();
@@ -299,6 +276,46 @@ public class MediaStream {
         return length;
     }
 
+    public synchronized void startRecord(){
+        if (Thread.currentThread() != mCameraThread) {
+            mCameraHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    startRecord();
+                }
+            });
+            return;
+        }
+        long millis = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getInt("record_interval", 300000);
+        mMuxer = new EasyMuxer(new File(recordPath, new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date())).toString(), millis);
+        if (mVC == null || audioStream == null) {
+            throw new IllegalStateException("you need to start preview before startRecord!");
+        }
+        mVC.setMuxer(mMuxer);
+        audioStream.setMuxer(mMuxer);
+    }
+
+
+    public synchronized void stopRecord(){
+        if (Thread.currentThread() != mCameraThread) {
+            mCameraHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    stopRecord();
+                }
+            });
+            return;
+        }
+        if (mVC == null || audioStream == null) {
+//            nothing
+        }else{
+            mVC.setMuxer(null);
+            audioStream.setMuxer(null);
+        }
+        if (mMuxer != null) mMuxer.release();
+        mMuxer = null;
+    }
+
     /**
      * 开启预览
      */
@@ -319,7 +336,6 @@ public class MediaStream {
             mCamera.addCallbackBuffer(new byte[size]);
             mCamera.addCallbackBuffer(new byte[size]);
             mCamera.setPreviewCallbackWithBuffer(previewCallback);
-
 
             mCamera.startPreview();
             try {
@@ -343,6 +359,11 @@ public class MediaStream {
 
             overlay = new TxtOverlay(mApplicationContext);
             try {
+                if (mSWCodec) {
+                    mVC = new SWConsumer(mApplicationContext, mEasyPusher);
+                } else {
+                    mVC = new HWConsumer(mApplicationContext, mEasyPusher);
+                }
                 if (!rotate) {
                     mVC.onVideoStart(previewSize.width, previewSize.height);
                     overlay.init(previewSize.width, previewSize.height, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
@@ -537,5 +558,9 @@ public class MediaStream {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public boolean isRecording() {
+        return mMuxer != null;
     }
 }
