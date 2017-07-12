@@ -71,6 +71,8 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     static Intent mResultIntent;
     static int mResultCode;
     private UpdateMgr update;
+    private BackgroundCameraService mService;
+    private ServiceConnection conn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -129,9 +131,43 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
 
         BUS.register(this);
         String url = "http://www.easydarwin.org/versions/easypusher/version.txt";
+        if (EasyApplication.isRTMP())
+        {
+            url = "http://www.easydarwin.org/versions/easyrtmp/version.txt";
+        }
 
         update = new UpdateMgr(this);
         update.checkUpdate(url);
+
+
+
+        // create background service for background use.
+        Intent intent = new Intent(this, BackgroundCameraService.class);
+        startService(intent);
+
+        conn = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+                mService = ((BackgroundCameraService.LocalBinder) iBinder).getService();
+//                mMediaStream = EasyApplication.sMS;
+
+
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName componentName) {
+            }
+        };
+        bindService(new Intent(this, BackgroundCameraService.class), conn, 0);
+
+
+//        if (mMediaStream != null){
+//            stopService(new Intent(this, BackgroundCameraService.class));
+//            mMediaStream.setSurfaceTexture(surface);
+//            mMediaStream.createCamera();
+//            mMediaStream.startPreview();
+//            return;
+//        }
     }
 
 
@@ -397,6 +433,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                 } else {
                     mMediaStream.stopStream();
                     btnSwitch.setText("开始");
+                    sendMessage("断开连接");
                 }
                 break;
             case R.id.btn_setting:
@@ -430,6 +467,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     @Override
     protected void onDestroy() {
         BUS.unregister(this);
+        unbindService(conn);
         super.onDestroy();
         handler.removeCallbacksAndMessages(null);
     }
@@ -458,21 +496,21 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     public void onBackPressed() {
         boolean isStreaming = mMediaStream != null && mMediaStream.isStreaming();
         if (isStreaming && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("key_enable_background_camera", true)) {
-            new AlertDialog.Builder(this).setTitle("提醒").setMessage("您设置了使能摄像头后台采集,是否继续在后台采集并上传视频？如果是，记得直播结束后,再回来这里关闭直播。").setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            new AlertDialog.Builder(this).setTitle("是否允许后台上传？").setMessage("您设置了使能摄像头后台采集,是否继续在后台采集并上传视频？如果是，记得直播结束后,再回来这里关闭直播。").setNeutralButton("后台采集", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialogInterface, int i) {
                     PreferenceManager.getDefaultSharedPreferences(StreamActivity.this).edit().putBoolean("background_camera_alert", true).apply();
                     StreamActivity.super.onBackPressed();
                     Toast.makeText(StreamActivity.this, "正在后台采集并上传。", Toast.LENGTH_SHORT).show();
                 }
-            }).setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            }).setPositiveButton("退出程序", new DialogInterface.OnClickListener() {
                 @Override
-                public void onClick(DialogInterface dialog, int which) {
+                public void onClick(DialogInterface dialogInterface, int i) {
                     mMediaStream.stopStream();
                     StreamActivity.super.onBackPressed();
-                    Toast.makeText(StreamActivity.this, "已经关闭上传。", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(StreamActivity.this, "程序已退出。", Toast.LENGTH_SHORT).show();
                 }
-            }).show();
+            }).setNegativeButton(android.R.string.cancel, null).show();
             return;
         } else {
             super.onBackPressed();
@@ -488,42 +526,32 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         final File easyPusher = new File(Environment.getExternalStorageDirectory() + (EasyApplication.isRTMP() ? "/EasyRTMP"
                 : "/EasyPusher"));
         easyPusher.mkdir();
-        if (mMediaStream != null) {
-            mMediaStream.setSurfaceTexture(surface);
-            mMediaStream.createCamera();
-            mMediaStream.startPreview();
-            return;
-        }
-        if (EasyApplication.sMS == null) {
-            mMediaStream = new MediaStream(getApplicationContext(), surface, PreferenceManager.getDefaultSharedPreferences(this)
-                    .getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true));
-            mMediaStream.setRecordPath(easyPusher.getPath());
-            EasyApplication.sMS = mMediaStream;
+        MediaStream ms = mService.getMediaStream();
+        if (ms != null) {    // switch from background to front
+            ms.stopPreview();
+            ms.setSurfaceTexture(surface);
+            ms.startPreview();
+            mMediaStream = ms;
 
-            startCamera();
+            if (ms.isStreaming()) {
+                String ip = EasyApplication.getEasyApplication().getIp();
+                String port = EasyApplication.getEasyApplication().getPort();
+                String id = EasyApplication.getEasyApplication().getId();
+                String url = String.format("rtsp://%s:%s/%s.sdp", ip, port, id);
+                if (EasyApplication.isRTMP()){
+                    url = EasyApplication.getEasyApplication().getUrl();
+                }
+                btnSwitch.setText("停止");
+                txtStreamAddress.setText(url);
+                sendMessage("推流中");
+            }
         } else {
-            bindService(new Intent(this, BackgroundCameraService.class), new ServiceConnection() {
-                @Override
-                public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-                    BackgroundCameraService service = ((BackgroundCameraService.LocalBinder) iBinder).getService();
-                    service.stopMySelf();
-
-                    mMediaStream = EasyApplication.sMS;
-                    mMediaStream.release();
-                    EasyApplication.sMS = mMediaStream = null;
-                    mMediaStream = new MediaStream(getApplicationContext(), surface, PreferenceManager.getDefaultSharedPreferences(StreamActivity.this)
-                            .getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true));
-                    EasyApplication.sMS = mMediaStream;
-                    startCamera();
-
-                    findViewById(R.id.btn_switch).performClick();
-                    unbindService(this);
-                }
-
-                @Override
-                public void onServiceDisconnected(ComponentName componentName) {
-                }
-            }, 0);
+            ms = new MediaStream(getApplicationContext(), surface, PreferenceManager.getDefaultSharedPreferences(this)
+                    .getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true));
+            ms.setRecordPath(easyPusher.getPath());
+            mMediaStream = ms;
+            startCamera();
+            mService.setMediaStream(ms);
         }
     }
 
@@ -536,17 +564,24 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
         boolean isStreaming = mMediaStream != null && mMediaStream.isStreaming();
         mMediaStream.stopPreview();
-        mMediaStream.destroyCamera();
-        if (isFinishing())
+        if (isFinishing()) {
             if (isStreaming && PreferenceManager.getDefaultSharedPreferences(StreamActivity.this)
                     .getBoolean("key_enable_background_camera", true)) {
-                startService(new Intent(StreamActivity.this, BackgroundCameraService.class));
+                // active background streaming
+                mService.activePreview();
             } else {
                 mMediaStream.stopStream();
-                EasyApplication.sMS = null;
                 mMediaStream.release();
                 mMediaStream = null;
+
+                stopService(new Intent(this, BackgroundCameraService.class));
             }
+        }else {
+            if (isStreaming) {
+                // active background streaming
+                mService.activePreview();
+            }
+        }
         return true;
     }
 

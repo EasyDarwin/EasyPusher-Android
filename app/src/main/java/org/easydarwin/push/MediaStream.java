@@ -5,7 +5,9 @@ import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.media.MediaCodec;
+import android.media.MediaFormat;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -14,6 +16,7 @@ import android.os.Process;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.util.Log;
+import android.view.SurfaceHolder;
 
 import org.easydarwin.audio.AudioStream;
 import org.easydarwin.easypusher.BuildConfig;
@@ -24,6 +27,7 @@ import org.easydarwin.hw.NV21Convertor;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
 import org.easydarwin.sw.TxtOverlay;
+import org.easydarwin.sw.X264Encoder;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -32,10 +36,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
+import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 
 import dagger.Module;
 import dagger.Provides;
@@ -82,18 +88,18 @@ public class MediaStream {
             public void run(){
                 try{
                     super.run();
-                }finally {
+                } finally {
                     stopStream();
                     destroyCamera();
                 }
             }
         };
         mCameraThread.start();
-        mCameraHandler = new Handler(mCameraThread.getLooper()){
+        mCameraHandler = new Handler(mCameraThread.getLooper()) {
             @Override
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
-                if (msg.what == SWITCH_CAMERA){
+                if (msg.what == SWITCH_CAMERA) {
                     switchCameraTask.run();
                 }
             }
@@ -140,7 +146,7 @@ public class MediaStream {
     }
 
     public void startStream(String url, InitCallback callback) {
-        if(PreferenceManager.getDefaultSharedPreferences(EasyApplication.getEasyApplication()).getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true))
+        if (PreferenceManager.getDefaultSharedPreferences(EasyApplication.getEasyApplication()).getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true))
             mEasyPusher.initPush(url, mApplicationContext, callback);
         else
             mEasyPusher.initPush(url, mApplicationContext, callback, ~0);
@@ -228,10 +234,6 @@ public class MediaStream {
             displayRotation = (cameraRotationOffset - mDgree + 360) % 360;
             mCamera.setDisplayOrientation(displayRotation);
 
-            SurfaceTexture holder = mSurfaceHolderRef.get();
-            if (holder != null) {
-                mCamera.setPreviewTexture(holder);
-            }
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -337,6 +339,17 @@ public class MediaStream {
             mCamera.addCallbackBuffer(new byte[size]);
             mCamera.setPreviewCallbackWithBuffer(previewCallback);
 
+
+            try {
+                SurfaceTexture holder = mSurfaceHolderRef.get();
+                if (holder != null) {
+                    mCamera.setPreviewTexture(holder);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
             mCamera.startPreview();
             try {
                 mCamera.autoFocus(null);
@@ -440,6 +453,11 @@ public class MediaStream {
             mVC.onVideoStop();
         if (overlay != null)
             overlay.release();
+
+        if (mMuxer != null) {
+            mMuxer.release();
+            mMuxer = null;
+        }
     }
 
     public Camera getCamera() {
@@ -549,7 +567,7 @@ public class MediaStream {
                 public void run() {
                     mCameraThread.quit();
                 }
-            })){
+            })) {
                 mCameraThread.quit();
             }
         }
