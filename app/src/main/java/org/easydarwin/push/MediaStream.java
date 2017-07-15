@@ -229,9 +229,28 @@ public class MediaStream {
 
             previewFormat = mSWCodec ? ImageFormat.YV12 : debugger.getNV21Convertor().getPlanar() ? ImageFormat.YV12 : ImageFormat.NV21;
             parameters.setPreviewFormat(previewFormat);
-            List<Camera.Size> sizes = parameters.getSupportedPreviewSizes();
+//            List<Camera.Size> sizes = parameters.getSupportedPreviewSizes();
             parameters.setPreviewSize(width, height);
-            parameters.setPreviewFpsRange(max[0], max[1]);
+//            parameters.setPreviewFpsRange(max[0], max[1]);
+            parameters.setPreviewFrameRate(20);
+
+//            int maxExposureCompensation = parameters.getMaxExposureCompensation();
+//            parameters.setExposureCompensation(3);
+//
+//            if(parameters.isAutoExposureLockSupported()) {
+//                parameters.setAutoExposureLock(false);
+//            }
+
+//            parameters.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_AUTO);
+//            parameters.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
+//            parameters.setSceneMode(Camera.Parameters.SCENE_MODE_AUTO);
+            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+//            mCamera.setFaceDetectionListener(new );
+
+//            if (parameters.isAutoWhiteBalanceLockSupported()){
+//                parameters.setAutoExposureLock(false);
+//            }
+
             mCamera.setParameters(parameters);
             int displayRotation;
             displayRotation = (cameraRotationOffset - mDgree + 360) % 360;
