@@ -223,7 +223,7 @@ Video bitrate 384 Kbps 2 Mbps 4 Mbps 10 Mbps
 //            bitrate = 2 * width * height;
 //        }
 
-        int bitrate = (int) (mWidth * mHeight * 20 * 2 * 0.07f);
+        int bitrate = (int) (mWidth * mHeight * 20 * 2 * 0.05f);
         if (mWidth >= 1920 || mHeight >= 1920) bitrate *= 0.3;
         else if (mWidth >= 1280 || mHeight >= 1280) bitrate *= 0.4;
         else if (mWidth >= 720 || mHeight >= 720) bitrate *= 0.6;
