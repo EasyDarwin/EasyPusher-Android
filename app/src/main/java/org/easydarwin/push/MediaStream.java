@@ -19,6 +19,7 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 
 import org.easydarwin.audio.AudioStream;
+import org.easydarwin.bus.SupportResolution;
 import org.easydarwin.easypusher.BuildConfig;
 import org.easydarwin.easypusher.EasyApplication;
 import org.easydarwin.easyrtmp.push.EasyRTMP;
@@ -28,6 +29,7 @@ import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
 import org.easydarwin.sw.TxtOverlay;
 import org.easydarwin.sw.X264Encoder;
+import org.easydarwin.util.Util;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -45,6 +47,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import dagger.Module;
 import dagger.Provides;
+
+import static org.easydarwin.easypusher.EasyApplication.BUS;
 
 @Module
 public class MediaStream {
@@ -211,6 +215,20 @@ public class MediaStream {
         try {
             mSWCodec = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key-sw-codec", false);
             mCamera = Camera.open(mCameraId);
+
+
+
+            if (Util.getSupportResolution(mApplicationContext).size() == 0) {
+                StringBuilder stringBuilder = new StringBuilder();
+                List<Camera.Size> supportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+                for (Camera.Size str : supportedPreviewSizes) {
+                    stringBuilder.append(str.width + "x" + str.height).append(";");
+                }
+                Util.saveSupportResolution(mApplicationContext, stringBuilder.toString());
+            }
+            BUS.post(new SupportResolution());
+
+
             Camera.Parameters parameters = mCamera.getParameters();
             int[] max = determineMaximumSupportedFramerate(parameters);
             Camera.CameraInfo camInfo = new Camera.CameraInfo();
