@@ -390,8 +390,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                 txtStreamAddress.setText(String.format("rtsp://%s:%s/%s.sdp", ip, port, id));
             }
         }
-
-        initSpninner();
     }
 
     private int getDgree() {
@@ -658,6 +656,8 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
             startCamera();
             mService.setMediaStream(ms);
         }
+
+        initSpninner();
     }
 
     @Override
