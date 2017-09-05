@@ -622,7 +622,9 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
 
     @Override
     public void onSurfaceTextureAvailable(final SurfaceTexture surface, int width, int height) {
-        goonWithAvailableTexture(surface);
+        if (mService != null) {
+            goonWithAvailableTexture(surface);
+        }
     }
 
     private void goonWithAvailableTexture(SurfaceTexture surface) {
@@ -632,6 +634,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         MediaStream ms = mService.getMediaStream();
         if (ms != null) {    // switch from background to front
             ms.stopPreview();
+            mService.inActivePreview();
             ms.setSurfaceTexture(surface);
             ms.startPreview();
             mMediaStream = ms;

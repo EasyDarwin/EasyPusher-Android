@@ -218,16 +218,6 @@ public class MediaStream {
 
 
 
-            if (Util.getSupportResolution(mApplicationContext).size() == 0) {
-                StringBuilder stringBuilder = new StringBuilder();
-                List<Camera.Size> supportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
-                for (Camera.Size str : supportedPreviewSizes) {
-                    stringBuilder.append(str.width + "x" + str.height).append(";");
-                }
-                Util.saveSupportResolution(mApplicationContext, stringBuilder.toString());
-            }
-            BUS.post(new SupportResolution());
-
 
             Camera.Parameters parameters = mCamera.getParameters();
             int[] max = determineMaximumSupportedFramerate(parameters);
@@ -376,6 +366,16 @@ public class MediaStream {
             mCamera.addCallbackBuffer(new byte[size]);
             mCamera.setPreviewCallbackWithBuffer(previewCallback);
 
+
+            if (Util.getSupportResolution(mApplicationContext).size() == 0) {
+                StringBuilder stringBuilder = new StringBuilder();
+                List<Camera.Size> supportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+                for (Camera.Size str : supportedPreviewSizes) {
+                    stringBuilder.append(str.width + "x" + str.height).append(";");
+                }
+                Util.saveSupportResolution(mApplicationContext, stringBuilder.toString());
+            }
+            BUS.post(new SupportResolution());
 
             try {
                 SurfaceTexture holder = mSurfaceHolderRef.get();

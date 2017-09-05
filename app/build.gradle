@@ -7,7 +7,7 @@ android {
     defaultConfig {
         applicationId "org.easydarwin.easypusher"
         minSdkVersion 16
-        targetSdkVersion 23
+        targetSdkVersion 22 // 确保在后台预览时不崩溃。。。
         versionCode 21
         versionName "1.3.17.0721"
         testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
