@@ -110,7 +110,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
             mNeedGrantedPermission = true;
             return;
         } else {
-            goonWithPermissionGranted();
+            // resume..
         }
     }
 
@@ -563,10 +563,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
 
     @Override
     protected void onDestroy() {
-        if (!mNeedGrantedPermission) {
-            unbindService(conn);
-            handler.removeCallbacksAndMessages(null);
-        }
         BUS.unregister(this);
         super.onDestroy();
     }
@@ -600,7 +596,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                 public void onClick(DialogInterface dialogInterface, int i) {
                     PreferenceManager.getDefaultSharedPreferences(StreamActivity.this).edit().putBoolean("background_camera_alert", true).apply();
                     StreamActivity.super.onBackPressed();
-                    Toast.makeText(StreamActivity.this, "正在后台采集并上传。", Toast.LENGTH_SHORT).show();
                 }
             }).setPositiveButton("退出程序", new DialogInterface.OnClickListener() {
                 @Override
@@ -670,32 +665,45 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
 
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-        boolean isStreaming = mMediaStream != null && mMediaStream.isStreaming();
-        mMediaStream.stopPreview();
-        if (isFinishing()) {
-            if (isStreaming && PreferenceManager.getDefaultSharedPreferences(StreamActivity.this)
-                    .getBoolean("key_enable_background_camera", true)) {
-                // active background streaming
-                mService.activePreview();
-            } else {
-                mMediaStream.stopStream();
-                mMediaStream.release();
-                mMediaStream = null;
-
-                stopService(new Intent(this, BackgroundCameraService.class));
-            }
-        } else {
-            if (isStreaming) {
-                // active background streaming
-                mService.activePreview();
-            }
-        }
         return true;
     }
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
 
+    }
+
+
+    @Override
+    protected void onPause() {
+        if (!mNeedGrantedPermission) {
+            unbindService(conn);
+            handler.removeCallbacksAndMessages(null);
+        }
+        boolean isStreaming = mMediaStream != null && mMediaStream.isStreaming();
+        mMediaStream.stopPreview();
+        if (isStreaming && PreferenceManager.getDefaultSharedPreferences(StreamActivity.this)
+                .getBoolean("key_enable_background_camera", true)) {
+            // active background streaming
+
+            Toast.makeText(StreamActivity.this, "正在后台采集并上传。", Toast.LENGTH_SHORT).show();
+            mService.activePreview();
+        } else {
+            mMediaStream.stopStream();
+            mMediaStream.release();
+            mMediaStream = null;
+
+            stopService(new Intent(this, BackgroundCameraService.class));
+        }
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!mNeedGrantedPermission){
+            goonWithPermissionGranted();
+        }
     }
 
     public void onRecord(View view) {

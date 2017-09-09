@@ -115,14 +115,6 @@ public class MediaStream {
 
                 @Override
                 public void onPreviewFrame(byte[] data, Camera camera) {
-                    if (data == null) {
-                        return;
-                    }
-                    Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
-                    if (data.length != previewSize.width * previewSize.height * 3 / 2) {
-                        mCamera.addCallbackBuffer(data);
-                        return;
-                    }
                     if (mDgree == 0) {
                         Camera.CameraInfo camInfo = new Camera.CameraInfo();
                         Camera.getCameraInfo(mCameraId, camInfo);
@@ -130,12 +122,12 @@ public class MediaStream {
 
                         if (cameraRotationOffset % 180 != 0) {
                             if (previewFormat == ImageFormat.YV12) {
-                                yuvRotate(data, 0, previewSize.width, previewSize.height, cameraRotationOffset);
+                                yuvRotate(data, 0, width, height, cameraRotationOffset);
                             } else {
-                                yuvRotate(data, 1, previewSize.width, previewSize.height, cameraRotationOffset);
+                                yuvRotate(data, 1, width, height, cameraRotationOffset);
                             }
                         }
-                        save2file(data, String.format("/sdcard/yuv_%d_%d.yuv", previewSize.height, previewSize.width));
+                        save2file(data, String.format("/sdcard/yuv_%d_%d.yuv", height, width));
                     }
                     if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_video_overlay", false)) {
                         String txt = String.format("drawtext=fontfile=" + mApplicationContext.getFileStreamPath("SIMYOU.ttf") + ": text='%s%s':x=(w-text_w)/2:y=H-60 :fontcolor=white :box=1:boxcolor=0x00000000@0.3", "EasyPusher", new SimpleDateFormat("yyyy-MM-ddHHmmss").format(new Date()));
@@ -362,6 +354,8 @@ public class MediaStream {
             int previewFormat = mCamera.getParameters().getPreviewFormat();
             Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
             int size = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewFormat) / 8;
+            width = previewSize.width;
+            height = previewSize.height;
             mCamera.addCallbackBuffer(new byte[size]);
             mCamera.addCallbackBuffer(new byte[size]);
             mCamera.setPreviewCallbackWithBuffer(previewCallback);
