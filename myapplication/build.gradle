@@ -1,0 +1,42 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 26
+    buildToolsVersion "26.0.1"
+
+
+    defaultConfig {
+        applicationId "com.example.myapplication"
+        minSdkVersion 16
+        targetSdkVersion 26
+        versionCode 1
+        versionName "1.0"
+
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    flavorDimensions 'prod'
+    productFlavors {
+        rtsp {
+            dimension 'prod'
+
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    compile 'com.android.support:appcompat-v7:26.0.2'
+    compile 'com.android.support.constraint:constraint-layout:1.0.2'
+    compile project(':library')
+
+    compile "android.arch.lifecycle:runtime:1.0.0-alpha9"
+    compile "android.arch.lifecycle:extensions:1.0.0-alpha9"
+    annotationProcessor "android.arch.lifecycle:compiler:1.0.0-alpha9"
+}

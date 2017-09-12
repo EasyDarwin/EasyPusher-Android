@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion '25.0.2'
+    compileSdkVersion 26
+    buildToolsVersion "26.0.1"
 
     defaultConfig {
         applicationId "org.easydarwin.easypusher"
@@ -21,8 +21,10 @@ android {
     dataBinding {
         enabled = true
     }
+    flavorDimensions 'prod'
     productFlavors {
         rtsp {
+            dimension 'prod'
             applicationId "org.easydarwin.easypusher"
             if (project.hasProperty('RTMP_KEY'))
             {
@@ -46,10 +48,6 @@ android {
         }
     }
 
-    android.applicationVariants.all { variant ->
-        def file = variant.outputs[0].outputFile
-        variant.outputs[0].outputFile = new File(file.parent, file.name.replace(".apk", "-" + defaultConfig.versionCode + "-" + defaultConfig.versionName+".apk"))
-    }
 }
 
 
@@ -64,9 +62,9 @@ dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     compile(name: 'update-release', ext: 'aar')
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:23.+'
-    compile 'com.android.support:support-v4:23.+'
-    compile 'com.android.support:preference-v7:23.4.0'
+    compile 'com.android.support:appcompat-v7:26.0.2'
+    compile 'com.android.support:support-v4:26.0.2'
+    compile 'com.android.support:preference-v7:26.0.2'
     compile 'com.android.support:design:23.4.0'
     compile 'com.squareup.okhttp3:okhttp:3.4.1'
     compile 'com.android.support.constraint:constraint-layout:+'
