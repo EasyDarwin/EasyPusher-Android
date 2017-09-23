@@ -360,7 +360,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                     height = ht;
                     if (mMediaStream != null) {
                         mMediaStream.updateResolution(width, height);
-                        mMediaStream.reStartStream();
                     }
                 }
             }
@@ -717,5 +716,9 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                 ib.setImageResource(R.drawable.ic_action_recording);
             }
         }
+    }
+
+    public void onClickResolution(View view) {
+        findViewById(R.id.spn_resolution).performClick();
     }
 }
