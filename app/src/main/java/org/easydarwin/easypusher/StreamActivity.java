@@ -350,6 +350,12 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         spnResolution.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (mMediaStream != null && mMediaStream.isStreaming()){
+                    int pos = listResolution.indexOf(String.format("%dx%d", width, height));
+                    spnResolution.setSelection(pos, false);
+                    Toast.makeText(StreamActivity.this,"正在推送中,无法切换分辨率",Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 String r = listResolution.get(position);
                 String[] splitR = r.split("x");
 
