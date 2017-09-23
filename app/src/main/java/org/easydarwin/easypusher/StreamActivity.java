@@ -106,7 +106,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         BUS.register(this);
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
                 ActivityCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.CAMERA,android.Manifest.permission.RECORD_AUDIO}, REQUEST_CAMERA_PERMISSION);
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO}, REQUEST_CAMERA_PERMISSION);
             mNeedGrantedPermission = true;
             return;
         } else {
@@ -250,7 +250,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                 break;
             case REQUEST_CAMERA_PERMISSION: {
                 if (grantResults.length > 1
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED&& grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                     mNeedGrantedPermission = false;
                     goonWithPermissionGranted();
 
@@ -350,6 +350,12 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         spnResolution.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (mMediaStream != null && mMediaStream.isStreaming()) {
+                    int pos = listResolution.indexOf(String.format("%dx%d", width, height));
+                    spnResolution.setSelection(pos, false);
+                    Toast.makeText(StreamActivity.this, "正在推送中,无法切换分辨率", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 String r = listResolution.get(position);
                 String[] splitR = r.split("x");
 
@@ -555,7 +561,8 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                     String[] splitR = r.split("x");
                     width = Integer.parseInt(splitR[0]);
                     height = Integer.parseInt(splitR[1]);
-                }initSpninner();
+                }
+                initSpninner();
             }
         });
     }
@@ -700,7 +707,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     @Override
     protected void onResume() {
         super.onResume();
-        if (!mNeedGrantedPermission){
+        if (!mNeedGrantedPermission) {
             goonWithPermissionGranted();
         }
     }
