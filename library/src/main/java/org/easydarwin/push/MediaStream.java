@@ -275,6 +275,11 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
         if (cameraOpened) closeCameraPreview();
     }
 
+    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    public void destory() {
+        if (lifecycle != null) lifecycle.removeObserver(this);
+    }
+
     @MainThread
     public void openCameraPreview(){
         cameraOpened = true;
