@@ -7,6 +7,7 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Process;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import org.easydarwin.easypusher.BuildConfig;
@@ -126,17 +127,27 @@ public class AudioStream {
                             e.printStackTrace();
                         }
                     }
-                    ;
-                    if (mAudioRecord != null) {
-                        mAudioRecord.stop();
-                        mAudioRecord.release();
-                        mAudioRecord = null;
+
+                    try {
+                        if (mAudioRecord != null) {
+                            mAudioRecord.stop();
+                            mAudioRecord.release();
+                            mAudioRecord = null;
+                        }
+                    } catch (Throwable ex) {
+                        ex.printStackTrace();
                     }
-                    if (mMediaCodec != null) {
-                        mMediaCodec.stop();
-                        mMediaCodec.release();
-                        mMediaCodec = null;
+
+                    try {
+                        if (mMediaCodec != null) {
+                            mMediaCodec.stop();
+                            mMediaCodec.release();
+                            mMediaCodec = null;
+                        }
+                    } catch (Throwable ex) {
+                        ex.printStackTrace();
                     }
+
                 }
             }
         }, "AACRecoder");
@@ -158,7 +169,7 @@ public class AudioStream {
 
         @Override
         public void run() {
-            int index;
+            int index = 0;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
             } else {
                 mBuffers = mMediaCodec.getOutputBuffers();
