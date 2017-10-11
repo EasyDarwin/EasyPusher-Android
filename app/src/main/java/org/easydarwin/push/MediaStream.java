@@ -115,14 +115,6 @@ public class MediaStream {
 
                 @Override
                 public void onPreviewFrame(byte[] data, Camera camera) {
-                    if (data == null) {
-                        return;
-                    }
-                    Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
-                    if (data.length != previewSize.width * previewSize.height * 3 / 2) {
-                        mCamera.addCallbackBuffer(data);
-                        return;
-                    }
                     if (mDgree == 0) {
                         Camera.CameraInfo camInfo = new Camera.CameraInfo();
                         Camera.getCameraInfo(mCameraId, camInfo);
@@ -130,12 +122,12 @@ public class MediaStream {
 
                         if (cameraRotationOffset % 180 != 0) {
                             if (previewFormat == ImageFormat.YV12) {
-                                yuvRotate(data, 0, previewSize.width, previewSize.height, cameraRotationOffset);
+                                yuvRotate(data, 0, width, height, cameraRotationOffset);
                             } else {
-                                yuvRotate(data, 1, previewSize.width, previewSize.height, cameraRotationOffset);
+                                yuvRotate(data, 1, width, height, cameraRotationOffset);
                             }
                         }
-                        save2file(data, String.format("/sdcard/yuv_%d_%d.yuv", previewSize.height, previewSize.width));
+                        save2file(data, String.format("/sdcard/yuv_%d_%d.yuv", height, width));
                     }
                     if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_video_overlay", false)) {
                         String txt = String.format("drawtext=fontfile=" + mApplicationContext.getFileStreamPath("SIMYOU.ttf") + ": text='%s%s':x=(w-text_w)/2:y=H-60 :fontcolor=white :box=1:boxcolor=0x00000000@0.3", "EasyPusher", new SimpleDateFormat("yyyy-MM-ddHHmmss").format(new Date()));
@@ -169,21 +161,21 @@ public class MediaStream {
     /**
      * 更新分辨率
      */
-    public void updateResolution(int width, int height) {
-        this.width = width;
-        this.height = height;
-    }
-
-    /**
-     * 重新开始
-     */
-    public void reStartStream() {
+    public void updateResolution(final int w, final int h) {
         if (mCamera == null) return;
         stopPreview();
         destroyCamera();
+        mCameraHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                width = w;
+                height = h;
+            }
+        });
         createCamera();
         startPreview();
     }
+
 
     public static int[] determineMaximumSupportedFramerate(Camera.Parameters parameters) {
         int[] maxFps = new int[]{0, 0};
@@ -215,19 +207,13 @@ public class MediaStream {
         try {
             mSWCodec = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key-sw-codec", false);
             mCamera = Camera.open(mCameraId);
-
-
-
-            if (Util.getSupportResolution(mApplicationContext).size() == 0) {
-                StringBuilder stringBuilder = new StringBuilder();
-                List<Camera.Size> supportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
-                for (Camera.Size str : supportedPreviewSizes) {
-                    stringBuilder.append(str.width + "x" + str.height).append(";");
+            mCamera.setErrorCallback(new Camera.ErrorCallback() {
+                @Override
+                public void onError(int i, Camera camera) {
+                    throw new IllegalStateException("Camera Error:" + i);
                 }
-                Util.saveSupportResolution(mApplicationContext, stringBuilder.toString());
-            }
-            BUS.post(new SupportResolution());
-
+            });
+            Log.i(TAG, "open Camera");
 
             Camera.Parameters parameters = mCamera.getParameters();
             int[] max = determineMaximumSupportedFramerate(parameters);
@@ -240,9 +226,11 @@ public class MediaStream {
             parameters.setRotation(rotate);
             parameters.setRecordingHint(true);
 
+            Log.i(TAG, "setRecordingHint");
             debugger = EncoderDebugger.debug(mApplicationContext, width, height);
 
             previewFormat = mSWCodec ? ImageFormat.YV12 : debugger.getNV21Convertor().getPlanar() ? ImageFormat.YV12 : ImageFormat.NV21;
+//            previewFormat = ImageFormat.NV21;
             parameters.setPreviewFormat(previewFormat);
 //            List<Camera.Size> sizes = parameters.getSupportedPreviewSizes();
             parameters.setPreviewSize(width, height);
@@ -267,10 +255,12 @@ public class MediaStream {
 //            }
 
             mCamera.setParameters(parameters);
+            Log.i(TAG, "setParameters");
             int displayRotation;
             displayRotation = (cameraRotationOffset - mDgree + 360) % 360;
             mCamera.setDisplayOrientation(displayRotation);
 
+            Log.i(TAG, "setDisplayOrientation");
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -315,7 +305,7 @@ public class MediaStream {
         return length;
     }
 
-    public synchronized void startRecord(){
+    public synchronized void startRecord() {
         if (Thread.currentThread() != mCameraThread) {
             mCameraHandler.post(new Runnable() {
                 @Override
@@ -335,7 +325,7 @@ public class MediaStream {
     }
 
 
-    public synchronized void stopRecord(){
+    public synchronized void stopRecord() {
         if (Thread.currentThread() != mCameraThread) {
             mCameraHandler.post(new Runnable() {
                 @Override
@@ -347,7 +337,7 @@ public class MediaStream {
         }
         if (mVC == null || audioStream == null) {
 //            nothing
-        }else{
+        } else {
             mVC.setMuxer(null);
             audioStream.setMuxer(null);
         }
@@ -372,15 +362,28 @@ public class MediaStream {
             int previewFormat = mCamera.getParameters().getPreviewFormat();
             Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
             int size = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewFormat) / 8;
+            width = previewSize.width;
+            height = previewSize.height;
             mCamera.addCallbackBuffer(new byte[size]);
             mCamera.addCallbackBuffer(new byte[size]);
             mCamera.setPreviewCallbackWithBuffer(previewCallback);
+            Log.i(TAG, "setPreviewCallbackWithBuffer");
 
+            if (Util.getSupportResolution(mApplicationContext).size() == 0) {
+                StringBuilder stringBuilder = new StringBuilder();
+                List<Camera.Size> supportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+                for (Camera.Size str : supportedPreviewSizes) {
+                    stringBuilder.append(str.width + "x" + str.height).append(";");
+                }
+                Util.saveSupportResolution(mApplicationContext, stringBuilder.toString());
+            }
+            BUS.post(new SupportResolution());
 
             try {
                 SurfaceTexture holder = mSurfaceHolderRef.get();
                 if (holder != null) {
                     mCamera.setPreviewTexture(holder);
+                    Log.i(TAG, "setPreviewTexture");
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -388,6 +391,7 @@ public class MediaStream {
 
 
             mCamera.startPreview();
+            Log.i(TAG, "startPreview");
             try {
                 mCamera.autoFocus(null);
             } catch (Exception e) {
@@ -423,7 +427,7 @@ public class MediaStream {
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();
-            }catch (IllegalArgumentException ex){
+            } catch (IllegalArgumentException ex) {
                 ex.printStackTrace();
             }
         }
@@ -481,13 +485,18 @@ public class MediaStream {
         if (mCamera != null) {
             mCamera.stopPreview();
             mCamera.setPreviewCallbackWithBuffer(null);
+            Log.i(TAG,"StopPreview");
         }
         if (audioStream != null) {
             audioStream.stop();
+            Log.i(TAG,"Stop AudioStream");
             audioStream = null;
         }
-        if (mVC != null)
+        if (mVC != null) {
             mVC.onVideoStop();
+
+            Log.i(TAG,"Stop VC");
+        }
         if (overlay != null)
             overlay.release();
 
@@ -572,10 +581,12 @@ public class MediaStream {
             try {
                 mCamera.release();
             } catch (Exception e) {
+                e.printStackTrace();
             }
+            Log.i(TAG, "release Camera");
             mCamera = null;
         }
-        if (mMuxer != null){
+        if (mMuxer != null) {
             mMuxer.release();
             mMuxer = null;
         }

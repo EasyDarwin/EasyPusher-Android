@@ -2,6 +2,7 @@ package org.easydarwin.easypusher;
 
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -81,6 +82,27 @@ public class BackgroundCameraService extends Service implements TextureView.Surf
         }
     }
 
+    private void backGroundNotificate() {
+
+        Intent notificationIntent = new Intent(this, StreamActivity.class);
+        PendingIntent pendingIntent =
+                PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+        Notification notification =
+                new Notification.Builder(this)
+                        .setContentTitle(getString(R.string.app_name))
+                        .setContentText("后台采集视频中")
+                        .setSmallIcon(R.mipmap.ic_launcher)
+                        .setContentIntent(pendingIntent)
+                        .build();
+
+        startForeground(NOTIFICATION_ID, notification);
+    }
+
+    public void inActivePreview() {
+        stopForeground(true);
+    }
+
     /**
      * Class used for the client Binder.  Because we know this service always
      * runs in the same process as its clients, we don't need to deal with IPC.
@@ -111,6 +133,8 @@ public class BackgroundCameraService extends Service implements TextureView.Surf
         layoutParams.gravity = Gravity.LEFT | Gravity.TOP;
         mWindowManager.addView(mOutComeVideoView, layoutParams);
         mOutComeVideoView.setSurfaceTextureListener(this);
+
+
     }
 
 
@@ -119,26 +143,13 @@ public class BackgroundCameraService extends Service implements TextureView.Surf
         if (intent == null) {
             return START_NOT_STICKY;
         }
-
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        manager.cancel(NOTIFICATION_ID);
-
         return super.onStartCommand(intent, flags, startId);
     }
 
-    public void backGroundNotificate()
-    {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(EasyApplication.getEasyApplication());
-        builder.setSmallIcon(R.mipmap.ic_launcher);
-        builder.setContentTitle(this.getString(R.string.app_name));
-        builder.setContentText("后台采集视频中");
-        Notification notification = builder.build();
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        manager.notify(NOTIFICATION_ID, notification);
-    }
 
     @Override
     public void onDestroy() {
+        stopForeground(true);
         if (mOutComeVideoView != null) {
             if (mOutComeVideoView.getParent() != null) {
                 mWindowManager.removeView(mOutComeVideoView);
