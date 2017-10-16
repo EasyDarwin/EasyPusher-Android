@@ -2,8 +2,11 @@ package com.example.myapplication;
 
 import android.arch.lifecycle.LifecycleActivity;
 import android.arch.lifecycle.Observer;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
+import android.media.projection.MediaProjectionManager;
+import android.os.Build;
 import android.support.annotation.Nullable;
 import android.os.Bundle;
 import android.arch.lifecycle.ViewModelProviders;
@@ -17,6 +20,7 @@ import org.easydarwin.push.MediaStream;
 public class MainActivity extends LifecycleActivity {
 
     private static final int REQUEST_CAMERA_PERMISSION = 1000;
+    private static final int REQUEST_MEDIA_PROJECTION = 1001;
     private MediaStream mediaStream;
 
     @Override
@@ -40,10 +44,27 @@ public class MainActivity extends LifecycleActivity {
 
             @Override
             public void onChanged(@Nullable MediaStream.PushingState pushingState) {
-                pushingStateText.setText(pushingState.msg);
-                if (pushingState.state > 0){
-                    pushingStateText.append(String.format("rtsp://cloud.easydarwin.org:554/test123456.sdp"));
+                if (pushingState.screenPushing) {
+                    pushingStateText.setText("屏幕推送");
+
+                    // 更改屏幕推送按钮状态.
+
+                    TextView tview = findViewById(R.id.pushing_desktop);
+                    if (pushingState.state > 0){
+                        tview.setText("取消推送");
+                    }else {
+                        tview.setText("推送屏幕");
+                    }
+                    findViewById(R.id.pushing_desktop).setEnabled(true);
+                }else{
+                    pushingStateText.setText("摄像头推送");
                 }
+                pushingStateText.append(":\t" + pushingState.msg);
+                if (pushingState.state > 0) {
+                    pushingStateText.append(pushingState.screenPushing ? String.format("rtsp://cloud.easydarwin.org:554/screen123456.sdp"):String.format("rtsp://cloud.easydarwin.org:554/test123456.sdp"));
+                }
+
+
             }
         });
         mediaStream.observeStreamingState(this, new Observer<Boolean>(){
@@ -92,6 +113,25 @@ public class MainActivity extends LifecycleActivity {
                 }
                 break;
             }
+        }
+    }
+
+    // 推送屏幕.
+    public void onPushScreen(View view) {
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            return;
+        }
+        MediaProjectionManager mMpMngr = (MediaProjectionManager) getApplicationContext().getSystemService(MEDIA_PROJECTION_SERVICE);
+        startActivityForResult(mMpMngr.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
+        // 防止点多次.
+        view.setEnabled(false);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_MEDIA_PROJECTION){
+            mediaStream.pushScreen(resultCode, data, "cloud.easydarwin.org", "554", "screen123456");
         }
     }
 }

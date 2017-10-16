@@ -15,7 +15,7 @@
 
     <application>
         <service
-            android:name=".BackgroundCameraService"
+            android:name="org.easydarwin.push.PushScreenService"
             android:enabled="true" />
 
     </application>

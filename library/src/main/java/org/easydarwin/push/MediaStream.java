@@ -1,5 +1,6 @@
 package org.easydarwin.push;
 
+import android.app.Activity;
 import android.app.Application;
 import android.arch.lifecycle.AndroidViewModel;
 import android.arch.lifecycle.Lifecycle;
@@ -10,6 +11,10 @@ import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.OnLifecycleEvent;
 import android.arch.lifecycle.ViewModel;
 import android.arch.lifecycle.ViewModelProvider;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
@@ -19,16 +24,21 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.IBinder;
 import android.os.Message;
 import android.os.Process;
 import android.preference.PreferenceManager;
 import android.support.annotation.MainThread;
 import android.support.v4.app.ActivityCompat;
+import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Button;
+import android.widget.TextView;
 
 import org.easydarwin.audio.AudioStream;
 import org.easydarwin.easypusher.BuildConfig;
 import org.easydarwin.easypusher.EasyApplication;
+import org.easydarwin.easypusher.R;
 import org.easydarwin.easyrtmp.push.EasyRTMP;
 import org.easydarwin.hw.EncoderDebugger;
 import org.easydarwin.hw.NV21Convertor;
@@ -67,7 +77,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
     AudioStream audioStream;
     private boolean isCameraBack = true;
     private int mDgree;
-    private Application mApplicationContext;
+    private final Application mApplicationContext;
     private boolean mSWCodec;
     private VideoConsumer mVC;
     private TxtOverlay overlay;
@@ -78,18 +88,58 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
     private int previewFormat;
     private boolean shouldStartPreview;
     private boolean cameraOpened;
+    private ServiceConnection conn;
+    private PushScreenService pushScreenService;
 
+    public void pushScreen(final int resultCode, final Intent data, final String ip, final String port ,final String id) {
+        pushingScreenLiveData.postValue(new PushingState(0,"未开始", true));
+        if (resultCode == Activity.RESULT_OK){
+
+            if (TextUtils.isEmpty(ip) || TextUtils.isEmpty(port)||TextUtils.isEmpty(id))
+            {
+                pushingScreenLiveData.postValue(new PushingState(-3002,"参数异常", true));
+                return;
+            }
+            Intent intent = new Intent(mApplicationContext, PushScreenService.class);
+
+            conn = new ServiceConnection() {
+                @Override
+                public void onServiceConnected(ComponentName name, IBinder service) {
+                    PushScreenService.MyBinder binder = (PushScreenService.MyBinder) service;
+                    pushScreenService = binder.getService();
+                    pushScreenService.startVirtualDisplay(resultCode, data, pushingScreenLiveData, ip, port, id);
+                }
+
+                @Override
+                public void onServiceDisconnected(ComponentName name) {
+                    pushScreenService = null;
+                }
+            };
+            mApplicationContext.bindService(intent, conn, Context.BIND_AUTO_CREATE);
+        }else{
+            pushingScreenLiveData.postValue(new PushingState(-3003,"用户取消", true));
+        }
+    }
 
 
     public static class PushingState {
         public final int state;
         public final String msg;
+        public final boolean screenPushing;
 
         public PushingState(int state, String msg) {
             this.state = state;
             this.msg = msg;
+            screenPushing = false;
+        }
+
+        public PushingState(int state, String msg, boolean screenPushing){
+            this.state = state;
+            this.msg = msg;
+            this.screenPushing = screenPushing;
         }
     }
+
 
     public static class CameraPreviewResolutionLiveData extends LiveData<int[]> {
 
@@ -112,6 +162,22 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
 
     }
 
+    public class PushingScreenLiveData extends LiveData<PushingState>{
+        private PushingState mOldValue;
+
+        @Override
+        protected void postValue(PushingState value) {
+            if (mOldValue != null && mOldValue.state == value.state) return;
+            if (value.state < 0)
+                if (pushScreenService != null) {
+                    mApplicationContext.unbindService(conn);
+                    pushScreenService  = null;
+                }
+            mOldValue = value;
+            super.postValue(value);
+        }
+    }
+
     public static class StreamingStateLiveData extends LiveData<Boolean> {
 
         @Override
@@ -124,6 +190,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
     private final CameraPreviewResolutionLiveData cameraPreviewResolution;
     private final PushingStateLiveData pushingStateLiveData;
     private final StreamingStateLiveData streamingStateLiveData;
+    private final PushingScreenLiveData pushingScreenLiveData;
 
     public MediaStream(Application context) {
         this(context, null, true);
@@ -134,6 +201,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
         cameraPreviewResolution = new CameraPreviewResolutionLiveData();
         pushingStateLiveData = new PushingStateLiveData();
         streamingStateLiveData = new StreamingStateLiveData();
+        pushingScreenLiveData = new PushingScreenLiveData();
         mApplicationContext = context;
         mSurfaceHolderRef = new WeakReference(texture);
         if (EasyApplication.isRTMP())
@@ -254,6 +322,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
     @MainThread
     public void observePushingState(LifecycleOwner owner, Observer<PushingState> observer) {
         pushingStateLiveData.observe(owner, observer);
+        pushingScreenLiveData.observe(owner, observer);
     }
 
     @MainThread
@@ -265,18 +334,29 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
         return pushingStateLiveData.getValue();
     }
 
+
+    public PushingState getScreenPushingState() {
+        return pushingScreenLiveData.getValue();
+    }
+
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     public void start() {
-        if (cameraOpened) openCameraPreview();
+        if (cameraOpened)
+            if (cameraCanOpenNow()) {
+                createCamera();
+                startPreview();
+            }
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
     public void stop() {
-        if (cameraOpened) closeCameraPreview();
+        if (cameraOpened)
+            stopPreview();
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
     public void destory() {
+        closeCameraPreview();
         if (lifecycle != null) lifecycle.removeObserver(this);
     }
 
@@ -290,7 +370,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
     }
 
     private boolean cameraCanOpenNow() {
-        if (lifecycle.getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+        if (lifecycle.getCurrentState().isAtLeast(Lifecycle.State.CREATED)) {
             if (ActivityCompat.checkSelfPermission(getApplication(), android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED ||
                     ActivityCompat.checkSelfPermission(getApplication(), android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                 // connect if not connected
@@ -761,5 +841,10 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
         stopPreview();
         destroyCamera();
         release();
+
+        if (pushScreenService != null) {
+            mApplicationContext.unbindService(conn);
+            pushScreenService  = null;
+        }
     }
 }
