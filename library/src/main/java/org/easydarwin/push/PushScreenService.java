@@ -114,63 +114,13 @@ public class PushScreenService extends Service {
         windowHeight *= 16;
     }
 
-    private void startPush(final String ip, final String port, final String id, final MediaStream.PushingScreenLiveData liveData) {
+    private void startPush(final Pusher pusher, final MediaStream.PushingScreenLiveData liveData) {
         liveData.postValue(new MediaStream.PushingState(0, "未开始", true));
+        mEasyPusher = pusher;
         mPushThread = new Thread(){
             @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             @Override
             public void run() {
-                String url = null;
-                if (EasyApplication.isRTMP()) {mEasyPusher = new EasyRTMP();
-                    url = String.format("rtsp://%s:%s/%s.sdp", ip,port,id);
-                    mEasyPusher.initPush(url, getApplicationContext(), null);
-                }else{
-                    mEasyPusher = new EasyPusher();
-                    InitCallback callback = new InitCallback() {
-                        @Override
-                        public void onCallback(int code) {
-                            String msg = "";
-                            switch (code) {
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_INVALID_KEY:
-                                    msg = ("无效Key");
-                                    break;
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_SUCCESS:
-                                    msg = ("未开始");
-                                    break;
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECTING:
-                                    msg = ("连接中");
-                                    break;
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECTED:
-                                    msg = ("连接成功");
-                                    break;
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECT_FAILED:
-                                    msg = ("连接失败");
-                                    break;
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECT_ABORT:
-                                    msg = ("连接异常中断");
-                                    break;
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_PUSHING:
-                                    msg = ("推流中");
-                                    break;
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_DISCONNECTED:
-                                    msg = ("断开连接");
-                                    break;
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_PLATFORM_ERR:
-                                    msg = ("平台不匹配");
-                                    break;
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_COMPANY_ID_LEN_ERR:
-                                    msg = ("断授权使用商不匹配");
-                                    break;
-                                case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_PROCESS_NAME_LEN_ERR:
-                                    msg = ("进程名称长度不匹配");
-                                    break;
-                            }
-                            liveData.postValue(new MediaStream.PushingState(code, msg, true));
-                        }
-                    };
-                    mEasyPusher.initPush(ip,port,String.format("%s.sdp", id),getApplicationContext(), callback);
-                }
-
                 while (mPushThread != null) {
                     int index = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 10000);
                     Log.i(TAG, "dequeue output buffer index=" + index);
@@ -206,7 +156,7 @@ public class PushScreenService extends Service {
                             }
                         }
 
-                        mEasyPusher.push(outData, mBufferInfo.presentationTimeUs/1000, 1);
+                        pusher.push(outData, mBufferInfo.presentationTimeUs/1000, 1);
 
 
                         mMediaCodec.releaseOutputBuffer(index, false);
@@ -230,12 +180,11 @@ public class PushScreenService extends Service {
                 e.printStackTrace();
             }
         }
-        mEasyPusher.stop();
         mEasyPusher = null;
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    void startVirtualDisplay(int resultCode, Intent resultData, MediaStream.PushingScreenLiveData liveData, String ip, String port, String id) {
+    void startVirtualDisplay(int resultCode, Intent resultData, MediaStream.PushingScreenLiveData liveData,Pusher pusher) {
         if (mMpj == null) {
             mMpj = mMpmngr.getMediaProjection(resultCode, resultData);
         }
@@ -253,7 +202,7 @@ public class PushScreenService extends Service {
             liveData.postValue(new MediaStream.PushingState(-1, "编码器初始化错误", true));
             return;
         }
-        startPush(ip, port, id, liveData);
+        startPush(pusher, liveData);
     }
 
 

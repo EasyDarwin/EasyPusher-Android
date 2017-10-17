@@ -14,7 +14,7 @@ public class EasyPusher implements Pusher{
     /*
     *本Key为3个月临时授权License，如需商业使用，请邮件至support@easydarwin.org申请此产品的授权。
     */
-    private static final String KEY = "";
+    private static final String KEY = "6A36334A743536526D3430414D4E425A70692F50532B706A62323075643256706333526C61793578636D4E76626D356C59335258444661672F307667523246326157346D516D466962334E68514449774D545A4659584E355247467964326C75564756686257566863336B3D";
     private static String TAG = "EasyPusher";
 
     static {

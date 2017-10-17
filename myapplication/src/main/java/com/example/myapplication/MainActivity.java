@@ -58,23 +58,22 @@ public class MainActivity extends LifecycleActivity {
                     findViewById(R.id.pushing_desktop).setEnabled(true);
                 }else{
                     pushingStateText.setText("摄像头推送");
+
+                    if (pushingState.state > 0){
+                        pushingBtn.setText("取消推送");
+                    }else {
+                        pushingBtn.setText("开始推送");
+                    }
+
                 }
                 pushingStateText.append(":\t" + pushingState.msg);
                 if (pushingState.state > 0) {
-                    pushingStateText.append(pushingState.screenPushing ? String.format("rtsp://cloud.easydarwin.org:554/screen123456.sdp"):String.format("rtsp://cloud.easydarwin.org:554/test123456.sdp"));
+                    pushingStateText.append(pushingState.screenPushing ? String.format("rtsp://cloud.easydarwin.org:554/screen.sdp"):String.format("rtsp://cloud.easydarwin.org:554/test123456.sdp"));
                 }
 
 
             }
         });
-        mediaStream.observeStreamingState(this, new Observer<Boolean>(){
-
-            @Override
-            public void onChanged(@Nullable Boolean aBoolean) {
-                pushingBtn.setText(aBoolean ? "停止推送":"开始推送");
-            }
-        });
-
         TextureView textureView = findViewById(R.id.texture_view);
         textureView.setSurfaceTextureListener(new SurfaceTextureListenerWrapper() {
             @Override
@@ -119,19 +118,25 @@ public class MainActivity extends LifecycleActivity {
     // 推送屏幕.
     public void onPushScreen(View view) {
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            return;
+        MediaStream.PushingState state = mediaStream.getScreenPushingState();
+        if (state != null && state.state > 0) {
+            // 取消推送。
+            mediaStream.stopPushScreen();
+        }else{
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                return;
+            }
+            MediaProjectionManager mMpMngr = (MediaProjectionManager) getApplicationContext().getSystemService(MEDIA_PROJECTION_SERVICE);
+            startActivityForResult(mMpMngr.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
+            // 防止点多次.
+            view.setEnabled(false);
         }
-        MediaProjectionManager mMpMngr = (MediaProjectionManager) getApplicationContext().getSystemService(MEDIA_PROJECTION_SERVICE);
-        startActivityForResult(mMpMngr.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
-        // 防止点多次.
-        view.setEnabled(false);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_MEDIA_PROJECTION){
-            mediaStream.pushScreen(resultCode, data, "cloud.easydarwin.org", "554", "screen123456");
+            mediaStream.pushScreen(resultCode, data, "cloud.easydarwin.org", "554", "screen");
         }
     }
 }
