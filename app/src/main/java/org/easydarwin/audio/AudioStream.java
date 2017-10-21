@@ -128,27 +128,17 @@ public class AudioStream {
                             e.printStackTrace();
                         }
                     }
-
-                    try {
-                        if (mAudioRecord != null) {
-                            mAudioRecord.stop();
-                            mAudioRecord.release();
-                            mAudioRecord = null;
-                        }
-                    } catch (Throwable ex) {
-                        ex.printStackTrace();
+                    ;
+                    if (mAudioRecord != null) {
+                        mAudioRecord.stop();
+                        mAudioRecord.release();
+                        mAudioRecord = null;
                     }
-
-                    try {
-                        if (mMediaCodec != null) {
-                            mMediaCodec.stop();
-                            mMediaCodec.release();
-                            mMediaCodec = null;
-                        }
-                    } catch (Throwable ex) {
-                        ex.printStackTrace();
+                    if (mMediaCodec != null) {
+                        mMediaCodec.stop();
+                        mMediaCodec.release();
+                        mMediaCodec = null;
                     }
-
                 }
             }
         }, "AACRecoder");

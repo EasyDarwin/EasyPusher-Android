@@ -78,7 +78,7 @@ public class RecordService extends Service {
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
         mediaFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
         mediaFormat.setInteger(MediaFormat.KEY_CAPTURE_RATE, 25);
-        mediaFormat.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000000);
+        mediaFormat.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000000 / 25);
         try {
             mMediaCodec = MediaCodec.createEncoderByType("video/avc");
         } catch (IOException e) {
@@ -102,13 +102,6 @@ public class RecordService extends Service {
             windowWidth /= 2;
             windowHeight /=2;
         }
-
-        windowWidth /= 16;
-        windowWidth *= 16;
-
-
-        windowHeight /= 16;
-        windowHeight *= 16;
     }
 
     private void startPush() {
