@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion '25.0.2'
+    buildToolsVersion '26.0.2'
 
     defaultConfig {
         applicationId "org.easydarwin.easypusher"
@@ -21,6 +21,7 @@ android {
     dataBinding {
         enabled = true
     }
+    flavorDimensions 'prod'
     productFlavors {
         rtsp {
             applicationId "org.easydarwin.easypusher"
@@ -44,11 +45,6 @@ android {
                 buildConfigField 'String', 'RTSP_KEY', "\"6A36334A743536526D3430416F36685A706C6463532F64685A6E646C59575A6B5A723558444661672F307667523246326157346D516D466962334E68514449774D545A4659584E355247467964326C75564756686257566863336B3D\""
             }
         }
-    }
-
-    android.applicationVariants.all { variant ->
-        def file = variant.outputs[0].outputFile
-        variant.outputs[0].outputFile = new File(file.parent, file.name.replace(".apk", "-" + defaultConfig.versionCode + "-" + defaultConfig.versionName+".apk"))
     }
 }
 
