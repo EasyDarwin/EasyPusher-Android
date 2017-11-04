@@ -287,5 +287,6 @@ public class PushScreenService extends Service {
         if (mMpj != null) {
             mMpj.stop();
         }
+        unregisterReceiver(mReceiver);
     }
 }

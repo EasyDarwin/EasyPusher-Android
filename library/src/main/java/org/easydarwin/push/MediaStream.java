@@ -236,7 +236,9 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
             public void run() {
                 try {
                     super.run();
-                } finally {
+                } catch (Throwable e){
+                    e.printStackTrace();
+                }finally {
                     if (pushScreenService != null) {
                         // 推送屏幕在关闭后不停止.
 //            mApplicationContext.unbindService(conn);
