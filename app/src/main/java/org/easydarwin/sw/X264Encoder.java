@@ -1,9 +1,5 @@
 package org.easydarwin.sw;
 
-/**
- * Created by John on 2016/11/13.
- * mail:251139896@qq.com
- */
 public class X264Encoder {
 
     static {

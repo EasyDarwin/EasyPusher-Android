@@ -34,7 +34,7 @@
         android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"
         android:layout_marginTop="8dp"
-        android:onClick="onPushing"
+        android:onClick="onSwitchCamera"
         android:text="更换摄像头"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -59,7 +59,7 @@
         android:layout_marginBottom="8dp"
         android:layout_marginStart="8dp"
         android:layout_marginLeft="8dp"
-        android:onClick="onPushing"
+        android:onClick="onChangeCameraParam"
         android:text="更改摄像头参数"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/pushing" />

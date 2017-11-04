@@ -1,9 +1,14 @@
 package org.easydarwin.push;
 
 import android.annotation.TargetApi;
+import android.app.Application;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.MediaCodec;
@@ -15,7 +20,9 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
+import android.provider.MediaStore;
 import android.support.annotation.Nullable;
+import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -23,15 +30,19 @@ import android.view.Surface;
 import android.view.WindowManager;
 
 import org.easydarwin.easypusher.EasyApplication;
+import org.easydarwin.easypusher.R;
 import org.easydarwin.easyrtmp.push.EasyRTMP;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static android.app.PendingIntent.FLAG_CANCEL_CURRENT;
+
 
 public class PushScreenService extends Service {
 
     private static final String TAG = "RService";
+    public static final String ACTION_CLOSE_PUSHING_SCREEN = "ACTION_CLOSE_PUSHING_SCREEN";
     private String mVideoPath;
     private MediaProjectionManager mMpmngr;
     private MediaProjection mMpj;
@@ -49,9 +60,15 @@ public class PushScreenService extends Service {
 
     private MediaCodec.BufferInfo mBufferInfo = new MediaCodec.BufferInfo();
 
-    private Pusher mEasyPusher;
     private Thread mPushThread;
     private byte[] mPpsSps;
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Application app = (Application) context.getApplicationContext();
+            MediaStream.stopPushScreen(app);
+        }
+    };
 
 
     public class MyBinder extends Binder
@@ -73,6 +90,8 @@ public class PushScreenService extends Service {
         super.onCreate();
         mMpmngr = (MediaProjectionManager) getApplicationContext().getSystemService(MEDIA_PROJECTION_SERVICE);
         createEnvironment();
+
+        registerReceiver(mReceiver,new IntentFilter(ACTION_CLOSE_PUSHING_SCREEN));
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
@@ -115,15 +134,19 @@ public class PushScreenService extends Service {
     }
 
     private void startPush(final Pusher pusher, final MediaStream.PushingScreenLiveData liveData) {
-        liveData.postValue(new MediaStream.PushingState(0, "未开始", true));
-        mEasyPusher = pusher;
+//        liveData.postValue(new MediaStream.PushingState(0, "未开始", true));
         mPushThread = new Thread(){
             @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             @Override
             public void run() {
+
+                startForeground(111, new Notification.Builder(PushScreenService.this).setContentTitle(getString(R.string.screen_pushing))
+                        .setSmallIcon(R.drawable.ic_pusher_screen_pushing)
+                        .addAction(new Notification.Action(R.drawable.ic_close_pushing_screen, "关闭",
+                                PendingIntent.getBroadcast(getApplicationContext(), 10000, new Intent(ACTION_CLOSE_PUSHING_SCREEN), FLAG_CANCEL_CURRENT))).build());
                 while (mPushThread != null) {
                     int index = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 10000);
-                    Log.i(TAG, "dequeue output buffer index=" + index);
+                    Log.d(TAG, "dequeue output buffer index=" + index);
 
                     if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {//请求超时
                         try {
@@ -163,6 +186,7 @@ public class PushScreenService extends Service {
                     }
 
                 }
+                stopForeground(true);
             }
         };
         mPushThread.start();
@@ -180,11 +204,19 @@ public class PushScreenService extends Service {
                 e.printStackTrace();
             }
         }
-        mEasyPusher = null;
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     void startVirtualDisplay(int resultCode, Intent resultData, MediaStream.PushingScreenLiveData liveData,Pusher pusher) {
+
+        try {
+            configureMedia();
+        } catch (IOException e) {
+            e.printStackTrace();
+            liveData.postValue(new MediaStream.PushingState(-1, "编码器初始化错误", true));
+            return;
+        }
+
         if (mMpj == null) {
             mMpj = mMpmngr.getMediaProjection(resultCode, resultData);
         }
@@ -195,13 +227,6 @@ public class PushScreenService extends Service {
         mVirtualDisplay = mMpj.createVirtualDisplay("record_screen", windowWidth, windowHeight, screenDensity,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR|DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC|DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION, mSurface, null, null);
 
-        try {
-            configureMedia();
-        } catch (IOException e) {
-            e.printStackTrace();
-            liveData.postValue(new MediaStream.PushingState(-1, "编码器初始化错误", true));
-            return;
-        }
         startPush(pusher, liveData);
     }
 

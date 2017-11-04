@@ -32,11 +32,14 @@ android {
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile 'com.android.support:appcompat-v7:26.0.2'
+    compile 'com.android.support:appcompat-v7:26.1.0'
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     compile project(':library')
 
-    compile "android.arch.lifecycle:runtime:1.0.0-alpha9"
-    compile "android.arch.lifecycle:extensions:1.0.0-alpha9"
-    annotationProcessor "android.arch.lifecycle:compiler:1.0.0-alpha9"
+    compile "io.reactivex.rxjava2:rxjava:2.1.5"
+    compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
+
+    implementation "android.arch.lifecycle:extensions:1.0.0-rc1"
+    implementation "android.arch.lifecycle:reactivestreams:1.0.0-rc1"
+    annotationProcessor "android.arch.lifecycle:compiler:1.0.0-rc1"
 }
