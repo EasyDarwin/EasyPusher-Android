@@ -81,7 +81,17 @@ public class EasyRTMP implements Pusher {
     }
 
     @Override
-    public void initPush(String serverIP, String serverPort, String streamName, Context context, InitCallback callback) {
+    public void initPush(Context context, InitCallback callback) {
+        throw new RuntimeException("not support");
+    }
+
+    @Override
+    public void setMediaInfo(int videoCodec, int videoFPS, int audioCodec, int audioChannel, int audioSamplerate, int audioBitPerSample) {
+        throw new RuntimeException("not support");
+    }
+
+    @Override
+    public void start(String serverIP, String serverPort, String streamName){
         throw new RuntimeException("not support");
     }
 

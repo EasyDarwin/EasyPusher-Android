@@ -118,7 +118,9 @@ public class RecordService extends Service {
                     String ip = EasyApplication.getEasyApplication().getIp();
                     String port = EasyApplication.getEasyApplication().getPort();
                     String id = EasyApplication.getEasyApplication().getId();
-                    mEasyPusher.initPush(ip,port,String.format("%s_s.sdp", id),getApplicationContext(), null);
+                    mEasyPusher.initPush( getApplicationContext(), null);
+                    mEasyPusher.setMediaInfo(Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
+                    mEasyPusher.start(ip,port,String.format("%s_s.sdp", id));
                 }
 
                 while (mPushThread != null) {

@@ -60,12 +60,20 @@ public class EasyPusher implements Pusher{
     /**
      * 初始化
      *
+     * @param key        授权码
+     */
+    public native long init(String key, Context context, OnInitPusherCallback callback);
+
+    public native void setMediaInfo(long pusherObj, int videoCodec, int videoFPS, int audioCodec, int audioChannel, int audioSamplerate, int audioBitPerSample);
+
+    /**
+     * 开始推流
+     * @param pusherObj   init接口返回的句柄
      * @param serverIP   服务器IP
      * @param serverPort 服务端口
      * @param streamName 流名称
-     * @param key        授权码
      */
-    public native long init(String serverIP, String serverPort, String streamName, String key, Context context, OnInitPusherCallback callback);
+    public native void start(long pusherObj, String serverIP, String serverPort, String streamName);
 
     /**
      * 推送编码后的H264数据
@@ -88,10 +96,10 @@ public class EasyPusher implements Pusher{
     }
 
     @Override
-    public synchronized void initPush(String serverIP, String serverPort, String streamName, Context context, final InitCallback callback) {
+    public synchronized void initPush(Context context, final InitCallback callback) {
         Log.i(TAG, "PusherStart");
         String key = KEY;
-        mPusherObj = init(serverIP, serverPort, streamName, key, context, new OnInitPusherCallback() {
+        mPusherObj = init(key, context, new OnInitPusherCallback() {
             int code = Integer.MAX_VALUE;
             @Override
             public void onCallback(int code) {
@@ -111,6 +119,16 @@ public class EasyPusher implements Pusher{
     @Override
     public void initPush(String url, Context context, InitCallback callback, int fps) {
         throw new RuntimeException("not support");
+    }
+
+    public synchronized void setMediaInfo(int videoCodec, int videoFPS, int audioCodec, int audioChannel, int audioSamplerate, int audioBitPerSample){
+        if (mPusherObj == 0) return;
+        setMediaInfo(mPusherObj, videoCodec, videoFPS, audioCodec, audioChannel, audioSamplerate, audioBitPerSample);
+    }
+
+    public synchronized void start(String serverIP, String serverPort, String streamName){
+        if (mPusherObj == 0) return;
+        start(mPusherObj, serverIP, serverPort, streamName);
     }
 
     public synchronized void push(byte[] data, int offset, int length, long timestamp, int type) {
