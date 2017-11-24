@@ -120,7 +120,7 @@ public class RecordService extends Service {
                     String id = EasyApplication.getEasyApplication().getId();
                     mEasyPusher.initPush( getApplicationContext(), null);
                     mEasyPusher.setMediaInfo(Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
-                    mEasyPusher.start(ip,port,String.format("%s_s.sdp", id));
+                    mEasyPusher.start(ip,port,String.format("%s_s.sdp", id), Pusher.TransType.EASY_RTP_OVER_TCP);
                 }
 
                 while (mPushThread != null) {

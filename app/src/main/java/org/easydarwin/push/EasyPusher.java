@@ -72,8 +72,9 @@ public class EasyPusher implements Pusher{
      * @param serverIP   服务器IP
      * @param serverPort 服务端口
      * @param streamName 流名称
+     * @param transType  1为TCP推送 2为UDP推送
      */
-    public native void start(long pusherObj, String serverIP, String serverPort, String streamName);
+    public native void start(long pusherObj, String serverIP, String serverPort, String streamName, int transType);
 
     /**
      * 推送编码后的H264数据
@@ -126,9 +127,9 @@ public class EasyPusher implements Pusher{
         setMediaInfo(mPusherObj, videoCodec, videoFPS, audioCodec, audioChannel, audioSamplerate, audioBitPerSample);
     }
 
-    public synchronized void start(String serverIP, String serverPort, String streamName){
+    public synchronized void start(String serverIP, String serverPort, String streamName, int transType){
         if (mPusherObj == 0) return;
-        start(mPusherObj, serverIP, serverPort, streamName);
+        start(mPusherObj, serverIP, serverPort, streamName, transType);
     }
 
     public synchronized void push(byte[] data, int offset, int length, long timestamp, int type) {

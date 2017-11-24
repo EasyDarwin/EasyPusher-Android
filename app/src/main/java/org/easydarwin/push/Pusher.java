@@ -20,6 +20,11 @@ public interface Pusher {
         public static final int EASY_SDK_AUDIO_CODEC_G726 = 0x1100B;
     }
 
+    public static class TransType {
+        public static final int EASY_RTP_OVER_TCP = 1;   //TCP推送
+        public static final int EASY_RTP_OVER_UDP = 2;   //UDP推送
+    }
+
     public void stop() ;
 
     public  void initPush(final Context context, final InitCallback callback);
@@ -27,7 +32,7 @@ public interface Pusher {
     public  void initPush(final String url, final Context context, final InitCallback callback);
 
     public void setMediaInfo(int videoCodec, int videoFPS, int audioCodec, int audioChannel, int audioSamplerate, int audioBitPerSample);
-    public void start(String serverIP, String serverPort, String streamName);
+    public void start(String serverIP, String serverPort, String streamName, int transType);
 
     public  void push(byte[] data, int offset, int length, long timestamp, int type);
 

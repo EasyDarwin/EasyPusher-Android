@@ -91,7 +91,7 @@ public class EasyRTMP implements Pusher {
     }
 
     @Override
-    public void start(String serverIP, String serverPort, String streamName){
+    public void start(String serverIP, String serverPort, String streamName, int transType){
         throw new RuntimeException("not support");
     }
 
