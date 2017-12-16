@@ -16,22 +16,6 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    flavorDimensions 'prod'
-    productFlavors {
-        rtsp {
-            dimension 'prod'
-
-            if (project.hasProperty('RTSP_KEY'))
-            {
-                buildConfigField 'String', 'RTSP_KEY', RTSP_KEY
-            }else{
-                /*
-                *本Key为3个月临时授权License，如需商业使用，请邮件至support@easydarwin.org申请此产品的授权。
-                */
-                buildConfigField 'String', 'RTSP_KEY', "\"6A36334A743536526D3430414645645A70726A7270666872615731305A584E30567778576F502B6C34456468646D6C754A6B4A68596D397A595541794D4445325257467A65555268636E6470626C526C5957316C59584E35\""
-            }
-        }
-    }
 
 }
 
@@ -48,7 +32,7 @@ dependencies {
     testCompile 'junit:junit:4.12'
 
 
-    implementation "android.arch.lifecycle:extensions:1.0.0-rc1"
-    implementation "android.arch.lifecycle:reactivestreams:1.0.0-rc1"
-    annotationProcessor "android.arch.lifecycle:compiler:1.0.0-rc1"
+    implementation "android.arch.lifecycle:extensions:1.0.0"
+    implementation "android.arch.lifecycle:reactivestreams:1.0.0"
+    annotationProcessor "android.arch.lifecycle:compiler:1.0.0"
 }
