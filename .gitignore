@@ -4,3 +4,5 @@ build
 *.iml
 local.properties
 gradle.properties
+
+app/release/
