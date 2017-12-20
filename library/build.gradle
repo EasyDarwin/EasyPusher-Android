@@ -30,9 +30,12 @@ repositories {
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
-
-
-    implementation "android.arch.lifecycle:extensions:1.0.0"
-    implementation "android.arch.lifecycle:reactivestreams:1.0.0"
+    implementation 'android.arch.lifecycle:extensions:1.0.0'
+    implementation 'android.arch.lifecycle:reactivestreams:1.0.0'
     annotationProcessor "android.arch.lifecycle:compiler:1.0.0"
+
+    compile(name: 'libuvccamera-release', ext: 'aar') {
+        exclude module: 'support-v4'
+        exclude module: 'appcompat-v7'
+    }
 }

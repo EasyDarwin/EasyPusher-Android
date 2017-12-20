@@ -11,8 +11,6 @@ android {
         targetSdkVersion 26
         versionCode 1
         versionName "1.0"
-
-
     }
 
     buildTypes {
@@ -23,16 +21,26 @@ android {
     }
 }
 
+
+repositories {
+    flatDir {
+        dirs 'libs'
+    }
+    mavenCentral()
+}
+
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.android.support:appcompat-v7:26.1.0'
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
-    compile project(':library')
-
-    compile "io.reactivex.rxjava2:rxjava:2.1.6"
+    implementation project(':library')
+    compile(name: 'libuvccamera-release', ext: 'aar') {
+        exclude module: 'support-v4'
+        exclude module: 'appcompat-v7'
+    }
+    compile 'io.reactivex.rxjava2:rxjava:2.1.6'
     compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
-
-    implementation "android.arch.lifecycle:extensions:1.0.0"
-    implementation "android.arch.lifecycle:reactivestreams:1.0.0"
+    implementation 'android.arch.lifecycle:extensions:1.0.0'
+    implementation 'android.arch.lifecycle:reactivestreams:1.0.0'
     annotationProcessor "android.arch.lifecycle:compiler:1.0.0"
 }

@@ -9,6 +9,7 @@ import android.hardware.Camera;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Looper;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.os.Bundle;
 import android.arch.lifecycle.ViewModelProviders;
@@ -46,6 +47,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        // 使用软编码.
+        PreferenceManager.getDefaultSharedPreferences(this).edit().putBoolean("key-sw-codec", true).apply();
 
         mediaStream = ViewModelProviders.of(this).get(MediaStream.class);
         mediaStream.setLifecycle(getLifecycle());
@@ -76,18 +79,18 @@ public class MainActivity extends AppCompatActivity {
                     }
                     findViewById(R.id.pushing_desktop).setEnabled(true);
                 } else {
-                    pushingStateText.setText("摄像头推送");
+                    pushingStateText.setText("推送");
 
                     if (pushingState.state > 0) {
-                        pushingBtn.setText("取消推送");
+                        pushingBtn.setText("停止");
                     } else {
-                        pushingBtn.setText("开始推送");
+                        pushingBtn.setText("推送");
                     }
 
                 }
                 pushingStateText.append(":\t" + pushingState.msg);
                 if (pushingState.state > 0) {
-                    pushingStateText.append(pushingState.screenPushing ? String.format("rtsp://cloud.easydarwin.org:554/screen.sdp") : String.format("rtsp://cloud.easydarwin.org:554/test123456.sdp"));
+                    pushingStateText.append(pushingState.screenPushing ? String.format("rtsp://cloud.easydarwin.org:554/screen.sdp") : String.format("rtsp://cloud.easydarwin.org:554/ttt.sdp"));
                 }
 
 
@@ -222,5 +225,27 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    public void onUVCCamera(View view) {
+        mediaStream.switchCamera(2).subscribe(new AbstractSubscriber<Object>(){
+            @Override
+            public void onNext(Object o) {
+                super.onNext(o);
+                mediaStream.startStream("cloud.easydarwin.org", "554", "ttt");
+            }
+
+            @Override
+            public void onError(final Throwable t) {
+                super.onError(t);
+                t.printStackTrace();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MainActivity.this,"UVC摄像头启动失败.." + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
     }
 }

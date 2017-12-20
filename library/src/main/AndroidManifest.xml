@@ -12,10 +12,20 @@
     <uses-feature android:name="android.hardware.camera" />
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-feature
+        android:name="android.hardware.usb.host"
+        android:required="true" />
+    <uses-feature
+        android:glEsVersion="0x00020000"
+        android:required="true" />
 
     <application>
         <service
             android:name="org.easydarwin.push.PushScreenService"
+            android:enabled="true" />
+
+        <service
+            android:name="org.easydarwin.push.UVCCameraService"
             android:enabled="true" />
 
     </application>

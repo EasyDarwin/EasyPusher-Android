@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -25,11 +26,15 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Process;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.support.annotation.MainThread;
 import android.support.v4.app.ActivityCompat;
 import android.text.TextUtils;
 import android.util.Log;
+
+import com.serenegiant.usb.IFrameCallback;
+import com.serenegiant.usb.UVCCamera;
 
 import org.easydarwin.audio.AudioStream;
 import org.easydarwin.easypusher.BuildConfig;
@@ -42,24 +47,33 @@ import org.easydarwin.sw.TxtOverlay;
 import org.easydarwin.util.Util;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
+import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import static android.content.Context.MODE_PRIVATE;
 
 
 public class MediaStream extends AndroidViewModel implements LifecycleObserver {
     private static final boolean VERBOSE = BuildConfig.DEBUG;
     private static final int SWITCH_CAMERA = 11;
     private final boolean enanleVideo;
+    private final InitCallback callback;
     private Lifecycle lifecycle;
     private final Pusher mEasyPusher;
     static final String TAG = "EasyPusher";
@@ -83,8 +97,12 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
     private int previewFormat;
     private boolean shouldStartPreview;
     private boolean cameraOpened;
-     static ServiceConnection conn;
-     static PushScreenService pushScreenService;
+    static ServiceConnection conn;
+    static PushScreenService pushScreenService;
+    private UVCCamera uvcCamera;
+    private int mTargetCameraId;
+    private Subscriber<? super Object> mSwitchCameraSubscriber;
+    private Throwable uvcError;
 
     public void pushScreen(final int resultCode, final Intent data, final String ip, final String port, final String id) {
         if (resultCode != Activity.RESULT_OK) {
@@ -163,7 +181,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
         stopPushScreen(mApplicationContext);
     }
 
-    static void stopPushScreen(Application app){
+    static void stopPushScreen(Application app) {
         if (pushScreenService != null) {
             app.unbindService(conn);
             pushScreenService = null;
@@ -219,7 +237,12 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
 
     private static final CameraPreviewResolutionLiveData cameraPreviewResolution = new CameraPreviewResolutionLiveData();
     private static final PushingStateLiveData pushingStateLiveData = new PushingStateLiveData();
-    static final PushingScreenLiveData pushingScreenLiveData= new PushingScreenLiveData();
+    static final PushingScreenLiveData pushingScreenLiveData = new PushingScreenLiveData();
+
+    BlockingQueue<byte[]> bufferQueue = new ArrayBlockingQueue<byte[]>(10);
+    BlockingQueue<byte[]> cache = new ArrayBlockingQueue<byte[]>(100);
+    Runnable dequeueRunnable;
+
 
     public MediaStream(Application context) {
         this(context, null, true);
@@ -228,6 +251,25 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
     public MediaStream(Application context, SurfaceTexture texture, boolean enableVideo) {
         super(context);
         mApplicationContext = context;
+        File youyuan = context.getFileStreamPath("SIMYOU.ttf");
+        if (!youyuan.exists()){
+            AssetManager am = context.getAssets();
+            try {
+                InputStream is = am.open("zk/SIMYOU.ttf");
+                FileOutputStream os = context.openFileOutput("SIMYOU.ttf", MODE_PRIVATE);
+                byte[] buffer = new byte[1024];
+                int len = 0;
+                while ((len = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, len);
+                }
+                os.close();
+                is.close();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         mSurfaceHolderRef = new WeakReference(texture);
         if (EasyApplication.isRTMP())
             mEasyPusher = new EasyRTMP();
@@ -236,14 +278,14 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
             public void run() {
                 try {
                     super.run();
-                } catch (Throwable e){
+                } catch (Throwable e) {
                     e.printStackTrace();
-                }finally {
+                } finally {
                     if (pushScreenService != null) {
                         // 推送屏幕在关闭后不停止.
 //            mApplicationContext.unbindService(conn);
 //            pushScreenService = null;
-                    }else {
+                    } else {
                         stopStream();
                     }
                     destroyCamera();
@@ -251,56 +293,55 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
             }
         };
         mCameraThread.start();
-        mCameraHandler = new Handler(mCameraThread.getLooper()) {
-            @Override
-            public void handleMessage(Message msg) {
-                super.handleMessage(msg);
-                if (msg.what == SWITCH_CAMERA) {
-                    switchCameraTask.run();
-                }
-            }
-        };
+        mCameraHandler = new Handler(mCameraThread.getLooper());
         this.enanleVideo = enableVideo;
 
-        if (enableVideo)
+        if (enableVideo) {
             previewCallback = new Camera.PreviewCallback() {
 
                 @Override
                 public void onPreviewFrame(byte[] data, Camera camera) {
-                    if (mDgree == 0) {
-                        Camera.CameraInfo camInfo = new Camera.CameraInfo();
-                        Camera.getCameraInfo(mCameraId, camInfo);
-                        int cameraRotationOffset = camInfo.orientation;
-
-                        if (cameraRotationOffset % 180 != 0) {
-                            if (previewFormat == ImageFormat.YV12) {
-                                yuvRotate(data, 0, width, height, cameraRotationOffset);
-                            } else {
-                                yuvRotate(data, 1, width, height, cameraRotationOffset);
-                            }
-                        }
-                        save2file(data, String.format("/sdcard/yuv_%d_%d.yuv", height, width));
-                    }
-                    if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_video_overlay", false)) {
-                        String txt = String.format("drawtext=fontfile=" + mApplicationContext.getFileStreamPath("SIMYOU.ttf") + ": text='%s%s':x=(w-text_w)/2:y=H-60 :fontcolor=white :box=1:boxcolor=0x00000000@0.3", "EasyPusher", new SimpleDateFormat("yyyy-MM-ddHHmmss").format(new Date()));
-                        txt = "EasyPusher " + new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
-                        overlay.overlay(data, txt);
-                    }
-                    mVC.onVideo(data, previewFormat);
-                    mCamera.addCallbackBuffer(data);
+                    onPreviewFrame2(data, camera);
                 }
 
             };
-    }
+            uvcFrameCallback = new IFrameCallback() {
+                @Override
+                public void onFrame(ByteBuffer frame) {
+                    Thread.currentThread().setName("UVCCamera");
+                    frame.clear();
+                    byte[] data = cache.poll();
+                    if (data == null) {
+                        data = new byte[frame.capacity()];
+                    }
+                    frame.get(data);
+                    bufferQueue.offer(data);
 
-    public void setLifecycle(Lifecycle lifecycle) {
-        this.lifecycle = lifecycle;
-        lifecycle.addObserver(this);
-    }
+                    if (dequeueRunnable == null) {
+                        dequeueRunnable = new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    byte[] data = bufferQueue.poll(10, TimeUnit.MICROSECONDS);
+                                    if (data != null) {
+                                        onPreviewFrame2(data, uvcCamera);
+                                        cache.offer(data);
+                                    }
+                                    mCameraHandler.post(this);
+                                } catch (InterruptedException ex) {
+                                    ex.printStackTrace();
+                                }
+                            }
+                        };
+                        mCameraHandler.post(dequeueRunnable);
+                    }
+                }
+            };
+        }
 
-    @MainThread
-    public void startStream(String ip, String port, String id) {
-        InitCallback callback = new InitCallback() {
+        Intent intent = new Intent(mApplicationContext, UVCCameraService.class);
+        mApplicationContext.startService(intent);
+        callback = new InitCallback() {
             @Override
             public void onCallback(int code) {
                 String msg = "";
@@ -342,6 +383,50 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
                 pushingStateLiveData.postValue(new PushingState(code, msg));
             }
         };
+    }
+
+
+    public void onPreviewFrame2(byte[] data, Object camera) {
+        if (camera instanceof Camera) {
+            if (mDgree == 0) {
+                Camera.CameraInfo camInfo = new Camera.CameraInfo();
+                Camera.getCameraInfo(mCameraId, camInfo);
+                int cameraRotationOffset = camInfo.orientation;
+
+                if (cameraRotationOffset % 180 != 0) {
+                    if (previewFormat == ImageFormat.YV12) {
+                        yuvRotate(data, 0, width, height, cameraRotationOffset);
+                    } else {
+                        yuvRotate(data, 1, width, height, cameraRotationOffset);
+                    }
+                }
+                save2file(data, String.format("/sdcard/yuv_%d_%d.yuv", height, width));
+            }
+            if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_video_overlay", true)) {
+                String txt;// = String.format("drawtext=fontfile=" + mApplicationContext.getFileStreamPath("SIMYOU.ttf") + ": text='%s%s':x=(w-text_w)/2:y=H-60 :fontcolor=white :box=1:boxcolor=0x00000000@0.3", "EasyPusher", new SimpleDateFormat("yyyy-MM-ddHHmmss").format(new Date()));
+                txt = "EasyPusher " + new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
+                overlay.overlay(data, txt);
+            }
+            mVC.onVideo(data, previewFormat);
+            mCamera.addCallbackBuffer(data);
+        } else {
+            if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_video_overlay", true)) {
+                String txt;// = String.format("drawtext=fontfile=" + mApplicationContext.getFileStreamPath("SIMYOU.ttf") + ": text='%s%s':x=(w-text_w)/2:y=H-60 :fontcolor=white :box=1:boxcolor=0x00000000@0.3", "EasyPusher", new SimpleDateFormat("yyyy-MM-ddHHmmss").format(new Date()));
+                txt = "EasyPusher " + new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
+                overlay.overlay(data, txt);
+            }
+            mVC.onVideo(data, previewFormat);
+        }
+    }
+
+    public void setLifecycle(Lifecycle lifecycle) {
+        this.lifecycle = lifecycle;
+        lifecycle.addObserver(this);
+    }
+
+    @MainThread
+    public void startStream(String ip, String port, String id) {
+
         stopStream();
         mEasyPusher.initPush(ip, port, String.format("%s.sdp", id), mApplicationContext, callback);
     }
@@ -429,6 +514,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
         return maxFps;
     }
 
+
     protected void createCamera() {
 
         if (Thread.currentThread() != mCameraThread) {
@@ -444,6 +530,22 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
         if (!enanleVideo) {
             return;
         }
+        if (mCameraId == 2) {
+            UVCCamera value = UVCCameraService.liveData.getValue();
+            if (value != null) {
+                // uvc camera.
+                uvcCamera = value;
+                value.setPreviewSize(width, height,1, 30, UVCCamera.PIXEL_FORMAT_YUV420SP,1.0f);
+                return;
+//            value.startPreview();
+            }else{
+                Log.i(TAG, "NO UVCCamera");
+                uvcError = new Exception("no uvccamera connected!");
+                return;
+            }
+//            mCameraId = 0;
+        }
+
         if (mCamera != null) return;
         try {
             mSWCodec = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key-sw-codec", false);
@@ -591,7 +693,22 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
             });
             return;
         }
-        if (mCamera != null) {
+        boolean rotate = false;
+        UVCCamera value = uvcCamera;
+        if (value != null) {
+            SurfaceTexture holder = mSurfaceHolderRef.get();
+            if (holder != null) {
+                value.setPreviewTexture(holder);
+            }
+            try {
+                value.setFrameCallback(uvcFrameCallback, UVCCamera.PIXEL_FORMAT_YUV420SP/*UVCCamera.PIXEL_FORMAT_NV21*/);
+                value.startPreview();
+                cameraPreviewResolution.postValue(new int[]{width, height});
+            }catch (Throwable e){
+                uvcError = e;
+            }
+
+        }else if (mCamera != null) {
             int previewFormat = mCamera.getParameters().getPreviewFormat();
             Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
             int size = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewFormat) / 8;
@@ -629,7 +746,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
                 Log.i(TAG, "auto foucus fail");
             }
 
-            boolean rotate = false;
+
             if (mDgree == 0) {
                 Camera.CameraInfo camInfo = new Camera.CameraInfo();
                 Camera.getCameraInfo(mCameraId, camInfo);
@@ -641,25 +758,26 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
                 }
             }
 
-            overlay = new TxtOverlay(mApplicationContext);
-            try {
-                if (mSWCodec) {
-                    mVC = new SWConsumer(mApplicationContext, mEasyPusher);
-                } else {
-                    mVC = new HWConsumer(mApplicationContext, mEasyPusher);
-                }
-                if (!rotate) {
-                    mVC.onVideoStart(previewSize.width, previewSize.height);
-                    overlay.init(previewSize.width, previewSize.height, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
-                } else {
-                    mVC.onVideoStart(previewSize.height, previewSize.width);
-                    overlay.init(previewSize.height, previewSize.width, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
-                }
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            } catch (IllegalArgumentException ex) {
-                ex.printStackTrace();
+
+        }
+        overlay = new TxtOverlay(mApplicationContext);
+        try {
+            if (mSWCodec) {
+                mVC = new SWConsumer(mApplicationContext, mEasyPusher);
+            } else {
+                mVC = new HWConsumer(mApplicationContext, mEasyPusher);
             }
+            if (!rotate) {
+                mVC.onVideoStart(width, height);
+                overlay.init(width, height, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
+            } else {
+                mVC.onVideoStart(height, width);
+                overlay.init(height, width, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } catch (IllegalArgumentException ex) {
+            ex.printStackTrace();
         }
         audioStream = new AudioStream(mEasyPusher);
         audioStream.startRecord();
@@ -667,6 +785,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
 
 
     Camera.PreviewCallback previewCallback;
+    IFrameCallback uvcFrameCallback;
 
 
     /**
@@ -706,6 +825,10 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
             });
             return;
         }
+        UVCCamera value = uvcCamera;
+        if (value != null) {
+            value.stopPreview();
+        }
         if (mCamera != null) {
             mCamera.stopPreview();
             mCamera.setPreviewCallbackWithBuffer(null);
@@ -726,7 +849,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
         destroyCamera();
     }
 
-    public Publisher<Camera> getCamera(){
+    public Publisher<Camera> getCamera() {
         return new Publisher<Camera>() {
             @Override
             public void subscribe(final Subscriber<? super Camera> s) {
@@ -737,7 +860,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
                         s.onNext(mCamera);
                         s.onComplete();
                     }
-                })){
+                })) {
                     s.onError(new IllegalStateException());
                 }
             }
@@ -745,11 +868,44 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
     }
 
     /**
-     * 切换前后摄像头
+     *
+     * @param cameraId      0表示后置,1表示前置,2表示uvc摄像头,-1表示默认切换(比如前后置来回切换.).在非-1的情况下,如果没有ID对应的摄像头,则也会作默认切换.
      */
-    public void switchCamera() {
-        if (mCameraHandler.hasMessages(SWITCH_CAMERA)) return;
-        mCameraHandler.sendEmptyMessage(SWITCH_CAMERA);
+    public Publisher<Object> switchCamera(final int cameraId) {
+        Publisher pub = new Publisher<Object>() {
+            @Override
+            public void subscribe(Subscriber<? super Object> s) {
+                mSwitchCameraSubscriber = s;
+                mTargetCameraId = cameraId;
+                mCameraHandler.removeCallbacks(switchCameraTask);
+                mCameraHandler.post(switchCameraTask);
+            }
+        };
+        return pub;
+    }
+
+    public void switchCamera(){
+        switchCamera(-1).subscribe(new Subscriber<Object>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+
+            }
+
+            @Override
+            public void onNext(Object o) {
+
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                t.printStackTrace();
+            }
+
+            @Override
+            public void onComplete() {
+
+            }
+        });
     }
 
     private Runnable switchCameraTask = new Runnable() {
@@ -761,31 +917,68 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
             } else {
                 isCameraBack = true;
             }
-            if (!enanleVideo) return;
-            Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
-            cameraCount = Camera.getNumberOfCameras();//得到摄像头的个数
-            for (int i = 0; i < cameraCount; i++) {
-                Camera.getCameraInfo(i, cameraInfo);//得到每一个摄像头的信息
-                stopPreview();
-                destroyCamera();
-                if (mCameraId == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                    //现在是后置，变更为前置
-                    if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {//代表摄像头的方位，CAMERA_FACING_FRONT前置      CAMERA_FACING_BACK后置
+            try {
+                if (!enanleVideo) return;
+                if (mTargetCameraId != -1 && mCameraId == mTargetCameraId) {
+                    return;
+                }
+                if (mTargetCameraId == -1) {
+                    if (mCameraId == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                        mCameraId = Camera.CameraInfo.CAMERA_FACING_FRONT;
+                    } else if (mCameraId == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                        // 尝试切换到外置摄像头...
+                        mCameraId = 2;
+                    } else {
                         mCameraId = Camera.CameraInfo.CAMERA_FACING_BACK;
-                        createCamera();
-                        startPreview();
-                        break;
                     }
                 } else {
-                    //现在是前置， 变更为后置
-                    if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {//代表摄像头的方位，CAMERA_FACING_FRONT前置      CAMERA_FACING_BACK后置
-                        mCameraId = Camera.CameraInfo.CAMERA_FACING_FRONT;
-                        createCamera();
-                        startPreview();
-                        break;
+                    mCameraId = mTargetCameraId;
+                }
+                uvcError = null;
+                stopPreview();
+                destroyCamera();
+                createCamera();
+                startPreview();
+            }finally {
+                if (uvcCamera != null){
+                    if (mSwitchCameraSubscriber != null){
+                        mSwitchCameraSubscriber.onNext(uvcCamera);
+                    }
+                }else if (mCamera != null){
+                    if (mSwitchCameraSubscriber != null){
+                        mSwitchCameraSubscriber.onNext(mCamera);
+                    }
+                }else {
+                    if (mSwitchCameraSubscriber != null){
+                        if (uvcError != null){
+                            mSwitchCameraSubscriber.onError(uvcError);
+                        }else {
+                            mSwitchCameraSubscriber.onError(new IOException("could not create camera of id:" + mCameraId));
+                        }
+                    }else{
+//                        uvcCamera = new UVCCamera();
+//                        mSwitchCameraSubscriber.onNext(uvcCamera);
+//                        if (uvcFrameCallback != null){
+//                            new Thread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    long begin = SystemClock.elapsedRealtime();
+//                                    ByteBuffer bf = ByteBuffer.allocate(640*480*3/2);
+//                                    while (SystemClock.elapsedRealtime() -begin <= 30*1000){
+//                                        uvcFrameCallback.onFrame(bf);
+//                                        try {
+//                                            Thread.sleep(33);
+//                                        } catch (InterruptedException e) {
+//                                            e.printStackTrace();
+//                                        }
+//                                    }
+//                                }
+//                            }).start();
+//                        }
                     }
                 }
             }
+
         }
     };
 
@@ -808,6 +1001,12 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
                 }
             });
             return;
+        }
+
+        UVCCamera value = uvcCamera;
+        if (value != null) {
+//            value.destroy();
+            uvcCamera = null;
         }
         if (mCamera != null) {
             mCamera.stopPreview();
@@ -883,11 +1082,14 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
             // 推送屏幕在关闭后不停止.
 //            mApplicationContext.unbindService(conn);
 //            pushScreenService = null;
-        }else {
+        } else {
             stopStream();
         }
         stopPreview();
         destroyCamera();
         release();
+
+        Intent intent = new Intent(mApplicationContext, UVCCameraService.class);
+        mApplicationContext.stopService(intent);
     }
 }

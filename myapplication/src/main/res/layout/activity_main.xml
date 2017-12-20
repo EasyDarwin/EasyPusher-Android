@@ -6,100 +6,102 @@
     android:layout_height="match_parent"
     tools:context="com.example.myapplication.MainActivity">
 
+
     <TextureView
+        android:id="@+id/texture_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:id="@+id/texture_view"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintDimensionRatio="h,640:480"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <Button
-        android:id="@+id/pushing"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:text="开始推送"
-        android:onClick="onPushing"
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_gravity="bottom"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:stretchColumns="*"
+        android:layout_height="wrap_content">
+        <TextView
+            android:id="@+id/pushing_state"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toTopOf="@+id/pushing"
+            android:background="#66ffffff"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+        <TableRow>
+            <Button
+                android:id="@+id/pushing"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="推送"
+                android:onClick="onPushing"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
 
-    <Button
-        android:id="@+id/switching_camera"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginRight="8dp"
-        android:layout_marginTop="8dp"
-        android:onClick="onSwitchCamera"
-        android:text="更换摄像头"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-
-    <Button
-        android:id="@+id/pushing_desktop"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginRight="8dp"
-        android:layout_marginTop="8dp"
-        android:onClick="onPushScreen"
-        android:text="推送屏幕"
-        app:layout_constraintRight_toLeftOf="@+id/switching_camera"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/modify_camera_param"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:onClick="onChangeCameraParam"
-        android:text="更改摄像头参数"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/pushing" />
+            <Button
+                android:id="@+id/switching_camera"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="onSwitchCamera"
+                android:text="切换"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
 
-    <Button
-        android:id="@+id/press_record"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:text="按住录像"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/modify_camera_param" />
+            <Button
+                android:id="@+id/uvc_camera"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="onUVCCamera"
+                android:text="UVC"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+            <Button
+                android:id="@+id/pushing_desktop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="onPushScreen"
+                android:text="推送屏幕"
+                app:layout_constraintRight_toLeftOf="@+id/switching_camera"
+                app:layout_constraintTop_toTopOf="parent" />
+        </TableRow>
 
-    <TextView
-        android:id="@+id/record_time"
-        style="@style/Base.TextAppearance.AppCompat.Large"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:text="00:00"
-        android:textColor="#ff0000"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/texture_view" />
-    <TextView
-        android:id="@+id/pushing_state"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/pushing"
-        android:background="#66ffffff"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        <TableRow>
+
+
+            <Button
+                android:id="@+id/modify_camera_param"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="onChangeCameraParam"
+                android:text="更改摄像头参数"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/pushing" />
+
+
+            <Button
+                android:id="@+id/press_record"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="按住录像"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/modify_camera_param" />
+
+            <TextView
+                android:id="@+id/record_time"
+                style="@style/Base.TextAppearance.AppCompat.Large"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00:00"
+                android:textColor="#ff0000"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/texture_view" />
+        </TableRow>
+    </TableLayout>
+
 
 </android.support.constraint.ConstraintLayout>
