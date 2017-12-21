@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         // 使用软编码.
-        PreferenceManager.getDefaultSharedPreferences(this).edit().putBoolean("key-sw-codec", true).apply();
+        PreferenceManager.getDefaultSharedPreferences(this).edit().putBoolean("key-sw-codec", false).apply();
 
         mediaStream = ViewModelProviders.of(this).get(MediaStream.class);
         mediaStream.setLifecycle(getLifecycle());

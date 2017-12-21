@@ -517,6 +517,7 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
 
     protected void createCamera() {
 
+        mSWCodec = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key-sw-codec", false);
         if (Thread.currentThread() != mCameraThread) {
             mCameraHandler.post(new Runnable() {
                 @Override
@@ -548,7 +549,6 @@ public class MediaStream extends AndroidViewModel implements LifecycleObserver {
 
         if (mCamera != null) return;
         try {
-            mSWCodec = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key-sw-codec", false);
             mCamera = Camera.open(mCameraId);
 
 

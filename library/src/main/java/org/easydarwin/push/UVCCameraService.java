@@ -7,6 +7,7 @@ import android.hardware.usb.UsbDevice;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
+import android.util.SparseArray;
 import android.widget.Toast;
 
 import com.serenegiant.usb.DeviceFilter;
@@ -58,6 +59,8 @@ public class UVCCameraService extends Service {
     private static final String TAG = "OutterCamera";
     private USBMonitor mUSBMonitor;
     private UVCCamera mUVCCamera;
+
+    private SparseArray<UVCCamera> cameras = new SparseArray<>();
 
     public class MyBinder extends Binder {
 
@@ -131,6 +134,8 @@ public class UVCCameraService extends Service {
                     liveData.postValue(camera);
 
                     Toast.makeText(UVCCameraService.this, "UVCCamera connected!", Toast.LENGTH_SHORT).show();
+                    if (device != null)
+                        cameras.append(device.getDeviceId(), camera);
                 }catch (Exception ex){
                     ex.printStackTrace();
                 }
@@ -143,8 +148,19 @@ public class UVCCameraService extends Service {
 
 //                releaseCamera();
 
-                mUVCCamera = null;
-                liveData.postValue(null);
+                if (device != null) {
+                    UVCCamera camera = cameras.get(device.getDeviceId());
+                    if (mUVCCamera == camera) {
+                        mUVCCamera = null;
+                        Toast.makeText(UVCCameraService.this, "UVCCamera disconnected!", Toast.LENGTH_SHORT).show();
+                        liveData.postValue(null);
+                    }
+                    cameras.remove(device.getDeviceId());
+                }else {
+                    Toast.makeText(UVCCameraService.this, "UVCCamera disconnected!", Toast.LENGTH_SHORT).show();
+                    mUVCCamera = null;
+                    liveData.postValue(null);
+                }
 
 //                if (mUSBMonitor != null) {
 //                    mUSBMonitor.destroy();
