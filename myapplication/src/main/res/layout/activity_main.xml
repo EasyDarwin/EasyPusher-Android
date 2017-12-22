@@ -71,15 +71,6 @@
         <TableRow>
 
 
-            <Button
-                android:id="@+id/modify_camera_param"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:onClick="onChangeCameraParam"
-                android:text="更改摄像头参数"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/pushing" />
-
 
             <Button
                 android:id="@+id/press_record"

@@ -4,31 +4,27 @@ import android.arch.lifecycle.Observer;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
-import android.media.projection.MediaProjectionManager;
-import android.os.Build;
-import android.os.Bundle;
+import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import org.easydarwin.push.MediaStream;
-import org.easydarwin.push.UVCCameraService;
 
 import io.reactivex.Single;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 
-public class MainActivity extends AppCompatActivity {
-
-    private static final int REQUEST_CAMERA_PERMISSION = 1000;
-    private static final int REQUEST_MEDIA_PROJECTION = 1001;
+public class UVCActivity extends AppCompatActivity {
     private MediaStream mediaStream;
 
+    private static final int REQUEST_CAMERA_PERMISSION = 1000;
     private Single<MediaStream> getMediaStream() {
         Single<MediaStream> single = RxHelper.single(MediaStream.getBindedMediaStream(this, this), mediaStream);
         if (mediaStream == null) {
@@ -47,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_uvc);
 
         // 启动服务...
         Intent intent = new Intent(this, MediaStream.class);
@@ -56,30 +52,15 @@ public class MainActivity extends AppCompatActivity {
         getMediaStream().subscribe(new Consumer<MediaStream>() {
             @Override
             public void accept(final MediaStream ms) throws Exception {
-                ms.observeCameraPreviewResolution(MainActivity.this, new Observer<int[]>() {
-                    @Override
-                    public void onChanged(@Nullable int[] size) {
-                        Toast.makeText(MainActivity.this, "当前摄像头分辨率为:" + size[0] + "*" + size[1], Toast.LENGTH_SHORT).show();
-                    }
-                });
+
                 final TextView pushingStateText = findViewById(R.id.pushing_state);
                 final TextView pushingBtn = findViewById(R.id.pushing);
-                ms.observePushingState(MainActivity.this, new Observer<MediaStream.PushingState>() {
+                ms.observePushingState(UVCActivity.this, new Observer<MediaStream.PushingState>() {
 
                     @Override
                     public void onChanged(@Nullable MediaStream.PushingState pushingState) {
                         if (pushingState.screenPushing) {
                             pushingStateText.setText("屏幕推送");
-
-                            // 更改屏幕推送按钮状态.
-
-                            TextView tview = findViewById(R.id.pushing_desktop);
-                            if (pushingState.state > 0) {
-                                tview.setText("取消推送");
-                            } else {
-                                tview.setText("推送屏幕");
-                            }
-                            findViewById(R.id.pushing_desktop).setEnabled(true);
                         } else {
                             pushingStateText.setText("推送");
 
@@ -111,42 +92,21 @@ public class MainActivity extends AppCompatActivity {
                 });
 
 
-                if (ActivityCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
-                        ActivityCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(MainActivity.this, new String[]{android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO}, REQUEST_CAMERA_PERMISSION);
+                if (ActivityCompat.checkSelfPermission(UVCActivity.this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
+                        ActivityCompat.checkSelfPermission(UVCActivity.this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(UVCActivity.this, new String[]{android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO}, REQUEST_CAMERA_PERMISSION);
                 }
             }
         }, new Consumer<Throwable>() {
             @Override
             public void accept(Throwable throwable) throws Exception {
-                Toast.makeText(MainActivity.this, "创建服务出错!", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    public void onPushing(View view) {
-        getMediaStream().subscribe(new Consumer<MediaStream>() {
-            @Override
-            public void accept(MediaStream mediaStream) throws Exception {
-                MediaStream.PushingState state = mediaStream.getPushingState();
-                if (state != null && state.state > 0) { // 终止推送和预览
-                    mediaStream.stopStream();
-                    mediaStream.closeCameraPreview();
-                } else {                                // 启动预览和推送.
-                    mediaStream.openCameraPreview();
-                    String id = PreferenceManager.getDefaultSharedPreferences(MainActivity.this).getString("caemra-id", null);
-                    if (id == null) {
-                        double v = Math.random() * 1000;
-                        id = "c_" + (int) v;
-                        PreferenceManager.getDefaultSharedPreferences(MainActivity.this).edit().putString("caemra-id", id).apply();
-                    }
-                    mediaStream.startStream("cloud.easydarwin.org", "554", id);
-                }
+                Toast.makeText(UVCActivity.this, "创建服务出错!", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
 
+    // 权限获取到了.
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
@@ -161,6 +121,10 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
                 } else {
+                    // 没有获取到权限,退出....
+                    Intent intent = new Intent(this, MediaStream.class);
+                    stopService(intent);
+
                     finish();
                 }
                 break;
@@ -168,51 +132,76 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // 推送屏幕.
-    public void onPushScreen(final View view) {
+    public void onPush(View view) {
+
         getMediaStream().subscribe(new Consumer<MediaStream>() {
             @Override
-            public void accept(MediaStream mediaStream) throws Exception {
-                MediaStream.PushingState state = mediaStream.getScreenPushingState();
-                if (state != null && state.state > 0) {
-                    // 取消推送。
-                    mediaStream.stopPushScreen();
-                } else {
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                        return;
-                    }
-                    MediaProjectionManager mMpMngr = (MediaProjectionManager) getApplicationContext().getSystemService(MEDIA_PROJECTION_SERVICE);
-                    startActivityForResult(mMpMngr.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
-                    // 防止点多次.
-                    view.setEnabled(false);
+            public void accept(final MediaStream mediaStream) throws Exception {
+                MediaStream.PushingState state = mediaStream.getPushingState();
+                if (state != null && state.state > 0) { // 终止推送和预览
+                    mediaStream.stopStream();
+                    mediaStream.closeCameraPreview();
+                }else{
+                    // switch 0表示后置,1表示前置,2表示UVC摄像头
+                    RxHelper.single(mediaStream.switchCamera(2), null).subscribe(new Consumer<Object>() {
+                        @Override
+                        public void accept(Object o) throws Exception {
+                            String id = PreferenceManager.getDefaultSharedPreferences(UVCActivity.this).getString("uvc-id", null);
+                            if (id == null) {
+                                double v = Math.random() * 1000;
+                                id = "uvc_" + (int) v;
+                                PreferenceManager.getDefaultSharedPreferences(UVCActivity.this).edit().putString("uvc-id", id).apply();
+                            }
+                            mediaStream.startStream("cloud.easydarwin.org", "554", id);
+                        }
+                    }, new Consumer<Throwable>() {
+                        @Override
+                        public void accept(final Throwable t) throws Exception {
+                            t.printStackTrace();
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(UVCActivity.this, "UVC摄像头启动失败.." + t.getMessage(), Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+                    });
                 }
             }
         });
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, final int resultCode, final Intent data) {
-        if (requestCode == REQUEST_MEDIA_PROJECTION) {
-            getMediaStream().subscribe(new Consumer<MediaStream>() {
-                @Override
-                public void accept(MediaStream mediaStream) throws Exception {
-                    mediaStream.pushScreen(resultCode, data, "cloud.easydarwin.org", "554", "screen");
-                }
-            });
-        }
-    }
-
-    public void onSwitchCamera(View view) {
+    public void onRecord(View view) {       // 开始或结束录像.
+        final TextView txt = (TextView) view;
         getMediaStream().subscribe(new Consumer<MediaStream>() {
             @Override
             public void accept(MediaStream mediaStream) throws Exception {
-        mediaStream.switchCamera();
+                if (mediaStream.isRecording()){ // 如果正在录像,那停止.
+                    mediaStream.stopRecord();
+                    txt.setText("录像");
+                }else { // 没在录像,开始录像...
+                    // 表示最大录像时长为30秒,30秒后如果没有停止,会生成一个新文件.依次类推...
+                    // 文件格式为test_uvc_0.mp4,test_uvc_1.mp4,test_uvc_2.mp4,test_uvc_3.mp4
+                    String path = getExternalFilesDir(Environment.DIRECTORY_MOVIES) + "/test_uvc.mp4";
+                    mediaStream.startRecord(path, 30000);
+
+                    final TextView pushingStateText = findViewById(R.id.pushing_state);
+                    pushingStateText.append("\n录像地址:" + path);
+                    txt.setText("停止");
+                }
             }
         });
     }
 
-    public void onUVCCamera(View view) {
-        Intent intent = new Intent(this, UVCActivity.class);
-        startActivity(intent);
+    public void onQuit(View view) {     // 退出
+        finish();
+
+        // 终止服务...
+        Intent intent = new Intent(this, MediaStream.class);
+        stopService(intent);
+    }
+
+    public void onBackground(View view) {   // 后台
+        finish();
     }
 }

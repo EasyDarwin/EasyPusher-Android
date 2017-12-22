@@ -28,6 +28,11 @@
             android:name="org.easydarwin.push.UVCCameraService"
             android:enabled="true" />
 
+
+        <service
+            android:name="org.easydarwin.push.MediaStream"
+            android:enabled="true" />
+
     </application>
 
 </manifest>

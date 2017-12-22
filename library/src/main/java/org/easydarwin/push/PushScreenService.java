@@ -213,7 +213,7 @@ public class PushScreenService extends Service {
             configureMedia();
         } catch (IOException e) {
             e.printStackTrace();
-            liveData.postValue(new MediaStream.PushingState(-1, "编码器初始化错误", true));
+            liveData.postValue(new MediaStream.PushingState("",-1, "编码器初始化错误", true));
             return;
         }
 
@@ -221,7 +221,7 @@ public class PushScreenService extends Service {
             mMpj = mMpmngr.getMediaProjection(resultCode, resultData);
         }
         if (mMpj == null) {
-            liveData.postValue(new MediaStream.PushingState(-1, "未知错误", true));
+            liveData.postValue(new MediaStream.PushingState("",-1, "未知错误", true));
             return;
         }
         mVirtualDisplay = mMpj.createVirtualDisplay("record_screen", windowWidth, windowHeight, screenDensity,

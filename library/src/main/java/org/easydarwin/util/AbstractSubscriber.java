@@ -20,7 +20,7 @@ public abstract class AbstractSubscriber<T> implements Subscriber<T> {
 
     @Override
     public void onError(Throwable t) {
-
+        t.printStackTrace();
     }
 
     @Override

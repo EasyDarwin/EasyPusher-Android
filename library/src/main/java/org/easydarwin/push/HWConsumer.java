@@ -146,10 +146,7 @@ public class HWConsumer extends Thread implements VideoConsumer {
                 }
                 outputBuffer.position(bufferInfo.offset);
                 outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
-                EasyMuxer muxer = mMuxer;
-                if (muxer != null) {
-                    muxer.pumpStream(outputBuffer, bufferInfo, true);
-                }
+
 
                 boolean sync = false;
                 if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {// sps
@@ -164,7 +161,7 @@ public class HWConsumer extends Thread implements VideoConsumer {
                         mPpsSps = new byte[0];
                     }
                 }
-                sync |= (bufferInfo.flags & MediaCodec.BUFFER_FLAG_SYNC_FRAME) != 0;
+                sync = (bufferInfo.flags & MediaCodec.BUFFER_FLAG_SYNC_FRAME) != 0;
                 int len = mPpsSps.length + bufferInfo.size;
                 if (len > h264.length) {
                     h264 = new byte[len];
@@ -172,17 +169,21 @@ public class HWConsumer extends Thread implements VideoConsumer {
                 if (sync) {
                     System.arraycopy(mPpsSps, 0, h264, 0, mPpsSps.length);
                     outputBuffer.get(h264, mPpsSps.length, bufferInfo.size);
-                    mPusher.push(h264, 0, mPpsSps.length + bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
-                    if (BuildConfig.DEBUG)
-                        Log.i(TAG, String.format("push i video stamp:%d", bufferInfo.presentationTimeUs / 1000));
+
+                    bufferInfo.offset = 0;
+                    bufferInfo.size = mPpsSps.length + bufferInfo.size;
                 } else {
                     outputBuffer.get(h264, 0, bufferInfo.size);
-                    mPusher.push(h264, 0, bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
-                    if (BuildConfig.DEBUG)
-                        Log.i(TAG, String.format("push video stamp:%d", bufferInfo.presentationTimeUs / 1000));
                 }
 
 
+                mPusher.push(h264, 0, bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
+                if (BuildConfig.DEBUG)
+                    Log.i(TAG, String.format("push i video stamp:%d", bufferInfo.presentationTimeUs / 1000));
+                EasyMuxer muxer = mMuxer;
+                if (muxer != null) {
+                    muxer.pumpStream(outputBuffer, bufferInfo, true);
+                }
                 mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
             }
         }

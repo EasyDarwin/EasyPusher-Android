@@ -1,5 +1,6 @@
 package org.easydarwin.muxer;
 
+import android.annotation.TargetApi;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
@@ -34,20 +35,14 @@ public class EasyMuxer {
     private MediaFormat mVideoFormat;
     private MediaFormat mAudioFormat;
 
-    public EasyMuxer(String path, long durationMillis) {
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
+    public EasyMuxer(String path, long durationMillis) throws IOException {
+        if(path.endsWith(".mp4")) {
+            path = path.substring(0, path.lastIndexOf(".mp4"));
+        }
         mFilePath = path;
         this.durationMillis = durationMillis;
-        Object mux = null;
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-                mux = new MediaMuxer(path + "-" + index++ + ".mp4", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            mMuxer = (MediaMuxer) mux;
-//            EasyApplication.BUS.post(new StartRecord());
-        }
+        mMuxer = new MediaMuxer(path + "_" + index++ + ".mp4", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
     }
 
     public synchronized void addTrack(MediaFormat format, boolean isVideo) {
@@ -108,7 +103,7 @@ public class EasyMuxer {
                 Log.i(TAG, "BUFFER_FLAG_END_OF_STREAM received");
         }
 
-        if (System.currentTimeMillis() - mBeginMillis >= durationMillis) {
+        if (System.currentTimeMillis() - mBeginMillis >= durationMillis && isVideo && ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                 if (VERBOSE)
                     Log.i(TAG, String.format("record file reach expiration.create new file:" + index));
@@ -120,6 +115,7 @@ public class EasyMuxer {
                     mMuxer = new MediaMuxer(mFilePath + "-" + ++index + ".mp4", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
                     addTrack(mVideoFormat, true);
                     addTrack(mAudioFormat, false);
+                    pumpStream(outputBuffer, bufferInfo, isVideo);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
