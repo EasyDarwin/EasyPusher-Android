@@ -36,6 +36,7 @@ EasyPusher是EasyDarwin流媒体团队开发的一个RTSP/RTP流媒体音/视频
 - [x] 支持gop间隔、帧率、bierate、android编码profile和编码速度设置；
 - [x] [音频]android支持噪音抑制功能；
 - [x] [音频]android支持自动增益控制；
+- [x] 配套免费开源的EasyDarwin流媒体服务器；
 
 ## 获取更多信息 ##
 
