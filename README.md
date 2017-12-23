@@ -9,16 +9,6 @@ EasyPusher是EasyDarwin流媒体团队开发的一个RTSP/RTP流媒体音/视频
 
 - library分支是EasyPusher library的工程，主要面向开发者，将pusher功能集成到现有APP的场景。library使用了android architecture component的一些特性，非常便于集成。（见：https://developer.android.com/topic/libraries/architecture/index.html）。该分支要求AS版本3.0-beta7及以上。
 
-## 版本下载 ##
-
-- Android [https://fir.im/EasyPusher ](https://fir.im/EasyPusher "EasyPusher_Android")
-
-![EasyPusher_Android](http://www.easydarwin.org/skin/bs/images/app/EasyPusher_AN.png)
-
-- iOS [https://itunes.apple.com/us/app/easypusher/id1211967057](https://itunes.apple.com/us/app/easypusher/id1211967057 "EasyPusher_iOS")
-
-![EasyPusher_iOS](http://www.easydarwin.org/skin/bs/images/app/EasyPusher_iOS.png)
-
 ## 功能点支持 ##
 
 - [x] 多分辨率选择；
@@ -37,6 +27,20 @@ EasyPusher是EasyDarwin流媒体团队开发的一个RTSP/RTP流媒体音/视频
 - [x] [音频]android支持噪音抑制功能；
 - [x] [音频]android支持自动增益控制；
 - [x] 配套免费开源的EasyDarwin流媒体服务器；
+
+## 工作流程 ##
+
+![EasyPusher Work Flow](http://www.easydarwin.org/github/images/easypusher/easypusher_android_workfolw.png)
+
+## 版本下载 ##
+
+- Android [https://fir.im/EasyPusher ](https://fir.im/EasyPusher "EasyPusher_Android")
+
+![EasyPusher_Android](http://www.easydarwin.org/skin/bs/images/app/EasyPusher_AN.png)
+
+- iOS [https://itunes.apple.com/us/app/easypusher/id1211967057](https://itunes.apple.com/us/app/easypusher/id1211967057 "EasyPusher_iOS")
+
+![EasyPusher_iOS](http://www.easydarwin.org/skin/bs/images/app/EasyPusher_iOS.png)
 
 ## 获取更多信息 ##
 
