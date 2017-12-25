@@ -7,26 +7,23 @@ EasyPusher是EasyDarwin流媒体团队开发的一个RTSP/RTP流媒体音/视频
 ## 分支说明 ##
 
 - master分支是EasyPusher APP(https://fir.im/EasyPusher)的工程。如果需要验证Pusher的功能，可以使用这个工程进行编译运行，AS的版本无要求。
-
-- library分支是EasyPusher library的工程，主要面向开发者，将pusher功能集成到现有APP的场景。library使用了android architecture component的一些特性，非常便于集成。（见：https://developer.android.com/topic/libraries/architecture/index.html）。该分支要求AS版本3.0-beta7及以上。
+- library分支主要面向开发者，实现将pusher功能集成到现有APP的场景。library使用了android architecture component的一些特性，非常便于集成。（见：https://developer.android.com/topic/libraries/architecture/index.html）。该分支要求AS版本3.0以上。library分支里面包含libaray module和myapplication module,分别表示库工程源码和demo集成示例
 
 ## 功能点支持 ##
 
 - [x] 多分辨率选择；
-- [x] 支持横竖屏推送；
 - [x] `音视频`推送、`纯音频`推送、`纯视频`推送；
 - [x] 支持`边采集、边录像`；
-- [x] 支持rtsp推送 live|record模式设置；
 - [x] 稳定的录像、推流分离模式，**支持推流过程中随时开启录像，录像过程中，随时推流；**
-- [x] 支持本地录像文件回放、处理；
 - [x] 采集过程中，前后摄像头切换；
 - [x] android完美支持`文字水印、实时时间水印`；
 - [x] 支持`推送端实时静音/取消静音`；
-- [x] 支持软硬编码自适应；
+- [x] 支持软硬编码设置；
 - [x] android支持后台service推送摄像头或屏幕(推送屏幕需要5.0+版本)；
 - [x] 支持gop间隔、帧率、bierate、android编码profile和编码速度设置；
 - [x] [音频]android支持噪音抑制功能；
 - [x] [音频]android支持自动增益控制；
+- [x] 结合UVCCamera(https://github.com/saki4510t/UVCCamera)开源工程,支持**UVC摄像头视频推送\以及UVC摄像头本地录像**
 - [x] 配套免费开源的EasyDarwin流媒体服务器；
 
 ## 工作流程 ##
