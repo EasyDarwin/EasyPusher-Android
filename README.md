@@ -6,8 +6,8 @@ EasyPusher是EasyDarwin流媒体团队开发的一个RTSP/RTP流媒体音/视频
 
 ## 分支说明 ##
 
-- master分支是EasyPusher APP(https://fir.im/EasyPusher)的工程。如果需要验证Pusher的功能，可以使用这个工程进行编译运行，AS的版本无要求。
-- library分支主要面向开发者，实现将pusher功能集成到现有APP的场景。library使用了android architecture component的一些特性，非常便于集成。（见：https://developer.android.com/topic/libraries/architecture/index.html）。该分支要求AS版本3.0以上。library分支里面包含libaray module和myapplication module,分别表示库工程源码和demo集成示例
+- master分支是EasyPusher APP (https://fir.im/EasyPusher) 的工程。如果需要验证Pusher的功能，可以使用这个工程进行编译运行，AS的版本无要求。
+- library分支主要面向开发者，实现将pusher功能集成到现有APP的场景。library使用了android architecture component的一些特性，非常便于集成。（见：https://developer.android.com/topic/libraries/architecture/index.html） 。该分支要求AS版本3.0以上。library分支里面包含libaray module和myapplication module,分别表示库工程源码和demo集成示例
 
 ## 功能点支持 ##
 
@@ -23,7 +23,7 @@ EasyPusher是EasyDarwin流媒体团队开发的一个RTSP/RTP流媒体音/视频
 - [x] 支持gop间隔、帧率、bierate、android编码profile和编码速度设置；
 - [x] [音频]android支持噪音抑制功能；
 - [x] [音频]android支持自动增益控制；
-- [x] 结合UVCCamera(https://github.com/saki4510t/UVCCamera)开源工程,支持**UVC摄像头视频推送\以及UVC摄像头本地录像**
+- [x] 结合UVCCamera (https://github.com/saki4510t/UVCCamera) 开源工程,支持**UVC摄像头视频推送\以及UVC摄像头本地录像**
 - [x] 配套免费开源的EasyDarwin流媒体服务器；
 
 ## 工作流程 ##
