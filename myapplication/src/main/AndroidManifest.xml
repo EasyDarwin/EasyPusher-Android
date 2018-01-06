@@ -27,14 +27,15 @@
         <activity
             android:name=".MainActivity"
             android:launchMode="singleInstance">
-        </activity>
-        <activity android:name=".UVCActivity" android:launchMode="singleInstance">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity android:name=".UVCActivity" android:launchMode="singleInstance">
+
 
             <intent-filter>
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />

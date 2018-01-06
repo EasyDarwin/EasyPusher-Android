@@ -134,11 +134,13 @@ public class UVCActivity extends AppCompatActivity {
 
     public void onPush(View view) {
 
+        // 异步获取到MediaStream对象.
         getMediaStream().subscribe(new Consumer<MediaStream>() {
             @Override
             public void accept(final MediaStream mediaStream) throws Exception {
+                // 判断当前的推送状态.
                 MediaStream.PushingState state = mediaStream.getPushingState();
-                if (state != null && state.state > 0) { // 终止推送和预览
+                if (state != null && state.state > 0) { // 当前正在推送,那终止推送和预览
                     mediaStream.stopStream();
                     mediaStream.closeCameraPreview();
                 }else{
