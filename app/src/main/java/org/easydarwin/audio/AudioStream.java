@@ -221,7 +221,7 @@ public class AudioStream {
 
     private void addADTStoPacket(byte[] packet, int packetLen) {
         packet[0] = (byte) 0xFF;
-        packet[1] = (byte) 0xF1;
+        packet[1] = (byte) 0xF9;
         packet[2] = (byte) (((2 - 1) << 6) + (mSamplingRateIndex << 2) + (1 >> 2));
         packet[3] = (byte) (((1 & 3) << 6) + (packetLen >> 11));
         packet[4] = (byte) ((packetLen & 0x7FF) >> 3);
