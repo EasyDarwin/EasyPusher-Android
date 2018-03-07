@@ -92,7 +92,7 @@
             android:layout_height="wrap_content" />
 
         <TextView
-            android:text="Copyright © EasyDarwin.org 2012-2017"
+            android:text="Copyright © EasyDarwin.org 2012-2018"
             android:layout_height="wrap_content"
             android:gravity="center"
             android:id="@+id/textView3"
