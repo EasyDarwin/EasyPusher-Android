@@ -10,7 +10,6 @@ import org.easydarwin.bus.StartRecord;
 import org.easydarwin.bus.StopRecord;
 import org.easydarwin.easypusher.BuildConfig;
 import org.easydarwin.easypusher.EasyApplication;
-import org.easydarwin.push.EasyPusher;
 
 import java.io.File;
 import java.io.IOException;

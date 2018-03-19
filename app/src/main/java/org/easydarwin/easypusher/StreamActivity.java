@@ -10,10 +10,12 @@ import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
 import android.media.Image;
 import android.media.projection.MediaProjectionManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -21,6 +23,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -43,7 +46,6 @@ import org.easydarwin.bus.StartRecord;
 import org.easydarwin.bus.StopRecord;
 import org.easydarwin.bus.StreamStat;
 import org.easydarwin.bus.SupportResolution;
-import org.easydarwin.easyrtmp.push.EasyRTMP;
 import org.easydarwin.push.EasyPusher;
 import org.easydarwin.push.InitCallback;
 import org.easydarwin.push.MediaStream;
@@ -55,7 +57,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.jar.Manifest;
 
+import static android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED;
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static org.easydarwin.easypusher.EasyApplication.BUS;
+import static org.easydarwin.easypusher.SettingActivity.REQUEST_OVERLAY_PERMISSION;
 import static org.easydarwin.update.UpdateMgr.MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE;
 
 public class StreamActivity extends AppCompatActivity implements View.OnClickListener, TextureView.SurfaceTextureListener {
@@ -63,6 +68,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     static final String TAG = "EasyPusher";
     public static final int REQUEST_MEDIA_PROJECTION = 1002;
     public static final int REQUEST_CAMERA_PERMISSION = 1003;
+    public static final int REQUEST_STORAGE_PERMISSION = 1004;
 
     //默认分辨率
     int width = 640, height = 480;
@@ -104,9 +110,9 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         BUS.register(this);
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.CAMERA,android.Manifest.permission.RECORD_AUDIO}, REQUEST_CAMERA_PERMISSION);
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO}, REQUEST_CAMERA_PERMISSION);
             mNeedGrantedPermission = true;
             return;
         } else {
@@ -250,7 +256,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                 break;
             case REQUEST_CAMERA_PERMISSION: {
                 if (grantResults.length > 1
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED&& grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                     mNeedGrantedPermission = false;
                     goonWithPermissionGranted();
 
@@ -291,6 +297,21 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             new AlertDialog.Builder(this).setMessage("推送屏幕需要安卓5.0以上,您当前系统版本过低,不支持该功能。").setTitle("抱歉").show();
             return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+
+                new AlertDialog.Builder(this).setMessage("推送屏幕需要APP出现在顶部.是否确定?").setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+
+                        final Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + BuildConfig.APPLICATION_ID));
+                        startActivityForResult(intent, REQUEST_OVERLAY_PERMISSION);
+                    }
+                }).setNegativeButton(android.R.string.cancel,null).setCancelable(false).show();
+                return;
+            }
         }
 
         if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("alert_screen_background_pushing", false)) {
@@ -428,47 +449,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                 if (!mMediaStream.isStreaming()) {
                     String url = null;
                     if (EasyApplication.isRTMP()) {
-                        url = EasyApplication.getEasyApplication().getUrl();
-                        mMediaStream.startStream(url, new InitCallback() {
-                            @Override
-                            public void onCallback(int code) {
-                                switch (code) {
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_ACTIVATE_INVALID_KEY:
-                                        sendMessage("无效Key");
-                                        break;
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_ACTIVATE_SUCCESS:
-                                        sendMessage("激活成功");
-                                        break;
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_RTMP_STATE_CONNECTING:
-                                        sendMessage("连接中");
-                                        break;
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_RTMP_STATE_CONNECTED:
-                                        sendMessage("连接成功");
-                                        break;
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_RTMP_STATE_CONNECT_FAILED:
-                                        sendMessage("连接失败");
-                                        break;
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_RTMP_STATE_CONNECT_ABORT:
-                                        sendMessage("连接异常中断");
-                                        break;
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_RTMP_STATE_PUSHING:
-                                        sendMessage("推流中");
-                                        break;
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_RTMP_STATE_DISCONNECTED:
-                                        sendMessage("断开连接");
-                                        break;
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_ACTIVATE_PLATFORM_ERR:
-                                        sendMessage("平台不匹配");
-                                        break;
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_ACTIVATE_COMPANY_ID_LEN_ERR:
-                                        sendMessage("断授权使用商不匹配");
-                                        break;
-                                    case EasyRTMP.OnInitPusherCallback.CODE.EASY_ACTIVATE_PROCESS_NAME_LEN_ERR:
-                                        sendMessage("进程名称长度不匹配");
-                                        break;
-                                }
-                            }
-                        });
+
                     } else {
                         String ip = EasyApplication.getEasyApplication().getIp();
                         String port = EasyApplication.getEasyApplication().getPort();
@@ -561,7 +542,8 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                     String[] splitR = r.split("x");
                     width = Integer.parseInt(splitR[0]);
                     height = Integer.parseInt(splitR[1]);
-                }initSpninner();
+                }
+                initSpninner();
             }
         });
     }
@@ -595,8 +577,10 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     @Override
     public void onBackPressed() {
         boolean isStreaming = mMediaStream != null && mMediaStream.isStreaming();
-        if (isStreaming && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("key_enable_background_camera", true)) {
-            new AlertDialog.Builder(this).setTitle("是否允许后台上传？").setMessage("您设置了使能摄像头后台采集,是否继续在后台采集并上传视频？如果是，记得直播结束后,再回来这里关闭直播。").setNeutralButton("后台采集", new DialogInterface.OnClickListener() {
+        if (isStreaming && PreferenceManager.getDefaultSharedPreferences(this).getBoolean(SettingActivity.KEY_ENABLE_BACKGROUND_CAMERA, false)) {
+            new AlertDialog.Builder(this).setTitle("是否允许后台上传？")
+                    .setMessage("您设置了使能摄像头后台采集,是否继续在后台采集并上传视频？如果是，记得直播结束后,再回来这里关闭直播。")
+                    .setNeutralButton("后台采集", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialogInterface, int i) {
                     PreferenceManager.getDefaultSharedPreferences(StreamActivity.this).edit().putBoolean("background_camera_alert", true).apply();
@@ -659,8 +643,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
             startCamera();
             mService.setMediaStream(ms);
         }
-
-        initSpninner();
     }
 
     @Override
@@ -686,32 +668,36 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
             handler.removeCallbacksAndMessages(null);
         }
         boolean isStreaming = mMediaStream != null && mMediaStream.isStreaming();
-        mMediaStream.stopPreview();
-        if (isStreaming && PreferenceManager.getDefaultSharedPreferences(StreamActivity.this)
-                .getBoolean("key_enable_background_camera", true)) {
-            // active background streaming
+        if (mMediaStream != null) {
+            mMediaStream.stopPreview();
+            if (isStreaming && PreferenceManager.getDefaultSharedPreferences(StreamActivity.this)
+                    .getBoolean(SettingActivity.KEY_ENABLE_BACKGROUND_CAMERA, false)) {
+                mService.activePreview();
+            } else {
+                mMediaStream.stopStream();
+                mMediaStream.release();
+                mMediaStream = null;
 
-            Toast.makeText(StreamActivity.this, "正在后台采集并上传。", Toast.LENGTH_SHORT).show();
-            mService.activePreview();
-        } else {
-            mMediaStream.stopStream();
-            mMediaStream.release();
-            mMediaStream = null;
-
-            stopService(new Intent(this, BackgroundCameraService.class));
+                stopService(new Intent(this, BackgroundCameraService.class));
+            }
         }
+
         super.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (!mNeedGrantedPermission){
+        if (!mNeedGrantedPermission) {
             goonWithPermissionGranted();
         }
     }
 
     public void onRecord(View view) {
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_STORAGE_PERMISSION);
+            return;
+        }
         ImageButton ib = (ImageButton) view;
         if (mMediaStream != null) {
             if (mMediaStream.isRecording()) {
@@ -726,5 +712,22 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
 
     public void onClickResolution(View view) {
         findViewById(R.id.spn_resolution).performClick();
+    }
+
+    public void onSwitchOrientation(View view) {
+        if (mMediaStream != null) {
+            if (mMediaStream.isStreaming()){
+                Toast.makeText(this,"正在推送中,无法更改屏幕方向", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        int orientation = getRequestedOrientation();
+        if (orientation == SCREEN_ORIENTATION_UNSPECIFIED || orientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT){
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
+        }else{
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        }
+//        if (mMediaStream != null) mMediaStream.setDgree(getDgree());
     }
 }

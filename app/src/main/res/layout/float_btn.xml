@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView
+    android:layout_width="50dp"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:text="推流中"
+    android:background="#66ffffff"
+    android:gravity="center"
+    android:layout_height="40dp" />

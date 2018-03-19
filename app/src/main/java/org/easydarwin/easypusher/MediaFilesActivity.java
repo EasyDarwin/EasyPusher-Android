@@ -9,6 +9,7 @@ import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.view.ActionMode;
 import android.support.v7.widget.GridLayoutManager;
@@ -394,8 +395,9 @@ public class MediaFilesActivity extends AppCompatActivity {
                 try {
                     Intent intent = new Intent();
                     intent.setAction(Intent.ACTION_VIEW);
-                    intent.setDataAndType(Uri.fromFile(mSubFiles[holder.getAdapterPosition()]),
-                            "image/*");
+
+                    Uri fileUri = FileProvider.getUriForFile(getContext(), getString(R.string.org_easydarwin_update_authorities), mSubFiles[holder.getAdapterPosition()]);
+                    intent.setDataAndType(fileUri,"image/*");
                     startActivity(intent);
                 } catch (ActivityNotFoundException e) {
                     e.printStackTrace();
@@ -404,7 +406,9 @@ public class MediaFilesActivity extends AppCompatActivity {
                 try {
                     Intent intent = new Intent();
                     intent.setAction(Intent.ACTION_VIEW);
-                    intent.setDataAndType(Uri.fromFile(mSubFiles[holder.getAdapterPosition()]), "video/*");
+
+                    Uri fileUri = FileProvider.getUriForFile(getContext(), getString(R.string.org_easydarwin_update_authorities), mSubFiles[holder.getAdapterPosition()]);
+                    intent.setDataAndType(fileUri, "video/*");
                     startActivity(intent);
                 } catch (ActivityNotFoundException e) {
                     e.printStackTrace();

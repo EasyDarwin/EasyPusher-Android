@@ -11,14 +11,20 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import org.easydarwin.easypusher.BuildConfig;
+import org.easydarwin.easypusher.RecordService;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.push.Pusher;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 import javax.inject.Inject;
 
 public class AudioStream {
+    private static AudioStream _this;
     EasyMuxer muxer;
     private int samplingRate = 8000;
     private int bitRate = 16000;
@@ -26,14 +32,13 @@ public class AudioStream {
     int mSamplingRateIndex = 0;
     AudioRecord mAudioRecord;
     MediaCodec mMediaCodec;
-    Pusher easyPusher;
     private Thread mThread = null;
     String TAG = "AudioStream";
     //final String path = Environment.getExternalStorageDirectory() + "/123450001.aac";
 
     protected MediaCodec.BufferInfo mBufferInfo = new MediaCodec.BufferInfo();
     protected ByteBuffer[] mBuffers = null;
-
+    Set<Pusher> sets = new HashSet<>();
     /**
      * There are 13 supported frequencies by ADTS.
      **/
@@ -57,8 +62,7 @@ public class AudioStream {
     private Thread mWriter;
     private MediaFormat newFormat;
 
-    public AudioStream(Pusher easyPusher) {
-        this.easyPusher = easyPusher;
+    public AudioStream() {
         int i = 0;
         for (; i < AUDIO_SAMPLING_RATES.length; i++) {
             if (AUDIO_SAMPLING_RATES[i] == samplingRate) {
@@ -68,10 +72,32 @@ public class AudioStream {
         }
     }
 
+    public void addPusher(Pusher pusher){
+        boolean shouldStart =false;
+        synchronized (this){
+            if (sets.isEmpty())
+                shouldStart = true;
+            sets.add(pusher);
+        }
+        if (shouldStart) startRecord();
+    }
+
+    public void removePusher(Pusher pusher){
+        boolean shouldStop = false;
+        synchronized (this){
+            sets.remove(pusher);
+            if (sets.isEmpty())
+                shouldStop = true;
+        }
+        if (shouldStop) stop();
+    }
+
     /**
      * 编码
      */
-    public void startRecord() {
+    private void startRecord() {
+
+        if (mThread != null) return;
         mThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -128,27 +154,17 @@ public class AudioStream {
                             e.printStackTrace();
                         }
                     }
-
-                    try {
-                        if (mAudioRecord != null) {
-                            mAudioRecord.stop();
-                            mAudioRecord.release();
-                            mAudioRecord = null;
-                        }
-                    } catch (Throwable ex) {
-                        ex.printStackTrace();
+                    ;
+                    if (mAudioRecord != null) {
+                        mAudioRecord.stop();
+                        mAudioRecord.release();
+                        mAudioRecord = null;
                     }
-
-                    try {
-                        if (mMediaCodec != null) {
-                            mMediaCodec.stop();
-                            mMediaCodec.release();
-                            mMediaCodec = null;
-                        }
-                    } catch (Throwable ex) {
-                        ex.printStackTrace();
+                    if (mMediaCodec != null) {
+                        mMediaCodec.stop();
+                        mMediaCodec.release();
+                        mMediaCodec = null;
                     }
-
                 }
             }
         }, "AACRecoder");
@@ -165,8 +181,16 @@ public class AudioStream {
         this.muxer = muxer;
     }
 
+    public static synchronized AudioStream getInstance() {
+        if (_this == null) _this = new AudioStream();
+        return _this;
+    }
+
     private class WriterThread extends Thread {
 
+        public WriterThread() {
+            super("WriteAudio");
+        }
 
         @Override
         public void run() {
@@ -197,9 +221,16 @@ public class AudioStream {
                     mBuffer.position(7 + mBufferInfo.size);
                     addADTStoPacket(mBuffer.array(), mBufferInfo.size + 7);
                     mBuffer.flip();
-                    easyPusher.push(mBuffer.array(), 0, mBufferInfo.size + 7, mBufferInfo.presentationTimeUs / 1000, 0);
-                    if (BuildConfig.DEBUG)
-                        Log.i(TAG, String.format("push audio stamp:%d", mBufferInfo.presentationTimeUs / 1000));
+                    Collection<Pusher> p;
+                    synchronized (AudioStream.this){
+                        p = sets;
+                    }
+                    Iterator<Pusher> it = p.iterator();
+                    while (it.hasNext()){
+                        Pusher ps = it.next();
+                        ps.push(mBuffer.array(), 0, mBufferInfo.size + 7, mBufferInfo.presentationTimeUs / 1000, 0);
+                    }
+
                     mMediaCodec.releaseOutputBuffer(index, false);
                 } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                     mBuffers = mMediaCodec.getOutputBuffers();
@@ -229,7 +260,7 @@ public class AudioStream {
         packet[6] = (byte) 0xFC;
     }
 
-    public void stop() {
+    private void stop() {
         try {
             Thread t = mThread;
             mThread = null;

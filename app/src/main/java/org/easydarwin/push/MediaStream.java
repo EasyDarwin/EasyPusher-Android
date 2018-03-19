@@ -6,6 +6,8 @@ import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.media.MediaCodec;
+import android.media.MediaCodecInfo;
+import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,7 +26,6 @@ import org.easydarwin.bus.SupportResolution;
 import org.easydarwin.easypusher.BackgroundCameraService;
 import org.easydarwin.easypusher.BuildConfig;
 import org.easydarwin.easypusher.EasyApplication;
-import org.easydarwin.easyrtmp.push.EasyRTMP;
 import org.easydarwin.hw.EncoderDebugger;
 import org.easydarwin.hw.NV21Convertor;
 import org.easydarwin.muxer.EasyMuxer;
@@ -42,6 +43,9 @@ import java.io.StringWriter;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -50,6 +54,12 @@ import java.util.concurrent.ArrayBlockingQueue;
 import dagger.Module;
 import dagger.Provides;
 
+import static android.graphics.ImageFormat.NV21;
+import static android.graphics.ImageFormat.YV12;
+import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar;
+import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar;
+import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar;
+import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar;
 import static org.easydarwin.easypusher.EasyApplication.BUS;
 
 @Module
@@ -65,9 +75,8 @@ public class MediaStream {
     MediaCodec mMediaCodec;
     WeakReference<SurfaceTexture> mSurfaceHolderRef;
     Camera mCamera;
-    NV21Convertor mConvertor;
     boolean pushStream = false;//是否要推送数据
-    AudioStream audioStream;
+    final AudioStream audioStream = AudioStream.getInstance();
     private boolean isCameraBack = true;
     private int mDgree;
     private Context mApplicationContext;
@@ -77,8 +86,8 @@ public class MediaStream {
     private EasyMuxer mMuxer;
     private final HandlerThread mCameraThread;
     private final Handler mCameraHandler;
-    private EncoderDebugger debugger;
-    private int previewFormat;
+    //    private int previewFormat;
+    public static CodecInfo info = new CodecInfo();
 
     public MediaStream(Context context, SurfaceTexture texture) {
         this(context, texture, true);
@@ -87,14 +96,12 @@ public class MediaStream {
     public MediaStream(Context context, SurfaceTexture texture, boolean enableVideo) {
         mApplicationContext = context;
         mSurfaceHolderRef = new WeakReference(texture);
-        if (EasyApplication.isRTMP())
-            mEasyPusher = new EasyRTMP();
-        else mEasyPusher = new EasyPusher();
-        mCameraThread = new HandlerThread("CAMERA"){
-            public void run(){
-                try{
+        mEasyPusher = new EasyPusher();
+        mCameraThread = new HandlerThread("CAMERA") {
+            public void run() {
+                try {
                     super.run();
-                } catch (Throwable e){
+                } catch (Throwable e) {
                     Intent intent = new Intent(mApplicationContext, BackgroundCameraService.class);
                     mApplicationContext.stopService(intent);
                 } finally {
@@ -127,20 +134,16 @@ public class MediaStream {
                         int cameraRotationOffset = camInfo.orientation;
 
                         if (cameraRotationOffset % 180 != 0) {
-                            if (previewFormat == ImageFormat.YV12) {
-                                yuvRotate(data, 0, width, height, cameraRotationOffset);
-                            } else {
-                                yuvRotate(data, 1, width, height, cameraRotationOffset);
-                            }
+                            yuvRotate(data, 1, width, height, cameraRotationOffset);
                         }
                         save2file(data, String.format("/sdcard/yuv_%d_%d.yuv", height, width));
                     }
                     if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_video_overlay", false)) {
                         String txt = String.format("drawtext=fontfile=" + mApplicationContext.getFileStreamPath("SIMYOU.ttf") + ": text='%s%s':x=(w-text_w)/2:y=H-60 :fontcolor=white :box=1:boxcolor=0x00000000@0.3", "EasyPusher", new SimpleDateFormat("yyyy-MM-ddHHmmss").format(new Date()));
-                        txt = "EasyPusher " + new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
+                        txt = "EasyRTSP " + new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
                         overlay.overlay(data, txt);
                     }
-                    mVC.onVideo(data, previewFormat);
+                    mVC.onVideo(data, NV21);
                     mCamera.addCallbackBuffer(data);
                 }
 
@@ -234,12 +237,15 @@ public class MediaStream {
             parameters.setRotation(rotate);
             parameters.setRecordingHint(true);
 
-            Log.i(TAG, "setRecordingHint");
-            debugger = EncoderDebugger.debug(mApplicationContext, width, height);
 
-            previewFormat = mSWCodec ? ImageFormat.YV12 : debugger.getNV21Convertor().getPlanar() ? ImageFormat.YV12 : ImageFormat.NV21;
-//            previewFormat = ImageFormat.NV21;
-            parameters.setPreviewFormat(previewFormat);
+            ArrayList<CodecInfo> infos = listEncoders("video/avc");
+            if (infos.isEmpty()) mSWCodec = true;
+            if (mSWCodec) {
+            } else {
+                CodecInfo ci = infos.get(0);
+                info.mName = ci.mName;
+                info.mColorFormat = ci.mColorFormat;
+            }
 //            List<Camera.Size> sizes = parameters.getSupportedPreviewSizes();
             parameters.setPreviewSize(width, height);
 //            parameters.setPreviewFpsRange(max[0], max[1]);
@@ -439,8 +445,7 @@ public class MediaStream {
                 ex.printStackTrace();
             }
         }
-        audioStream = new AudioStream(mEasyPusher);
-        audioStream.startRecord();
+        audioStream.addPusher(mEasyPusher);
     }
 
     @Provides
@@ -493,17 +498,16 @@ public class MediaStream {
         if (mCamera != null) {
             mCamera.stopPreview();
             mCamera.setPreviewCallbackWithBuffer(null);
-            Log.i(TAG,"StopPreview");
+            Log.i(TAG, "StopPreview");
         }
         if (audioStream != null) {
-            audioStream.stop();
-            Log.i(TAG,"Stop AudioStream");
-            audioStream = null;
+            audioStream.removePusher(mEasyPusher);
+            Log.i(TAG, "Stop AudioStream");
         }
         if (mVC != null) {
             mVC.onVideoStop();
 
-            Log.i(TAG,"Stop VC");
+            Log.i(TAG, "Stop VC");
         }
         if (overlay != null)
             overlay.release();
@@ -636,5 +640,66 @@ public class MediaStream {
 
     public boolean isRecording() {
         return mMuxer != null;
+    }
+
+
+    public static class CodecInfo {
+        public String mName;
+        public int mColorFormat;
+    }
+
+    public static ArrayList<CodecInfo> listEncoders(String mime) {
+        // 可能有多个编码库，都获取一下。。。
+        ArrayList<CodecInfo> codecInfos = new ArrayList<CodecInfo>();
+        int numCodecs = MediaCodecList.getCodecCount();
+        // int colorFormat = 0;
+        // String name = null;
+        for (int i1 = 0; i1 < numCodecs; i1++) {
+            MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(i1);
+            if (!codecInfo.isEncoder()) {
+                continue;
+            }
+            if (codecMatch(mime, codecInfo)) {
+                String name = codecInfo.getName();
+                int colorFormat = getColorFormat(codecInfo, mime);
+                if (colorFormat != 0) {
+                    CodecInfo ci = new CodecInfo();
+                    ci.mName = name;
+                    ci.mColorFormat = colorFormat;
+                    codecInfos.add(ci);
+                }
+            }
+        }
+        return codecInfos;
+    }
+
+    public static boolean codecMatch(String mimeType, MediaCodecInfo codecInfo) {
+        String[] types = codecInfo.getSupportedTypes();
+        for (String type : types) {
+            if (type.equalsIgnoreCase(mimeType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static int getColorFormat(MediaCodecInfo codecInfo, String mimeType) {
+        MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
+        int[] cf = new int[capabilities.colorFormats.length];
+        System.arraycopy(capabilities.colorFormats, 0, cf, 0, cf.length);
+        List<Integer> sets = new ArrayList<>();
+        for (int i = 0; i < cf.length; i++) {
+            sets.add(cf[i]);
+        }
+        if (sets.contains(COLOR_FormatYUV420SemiPlanar)) {
+            return COLOR_FormatYUV420SemiPlanar;
+        } else if (sets.contains(COLOR_FormatYUV420Planar)) {
+            return COLOR_FormatYUV420Planar;
+        } else if (sets.contains(COLOR_FormatYUV420PackedPlanar)) {
+            return COLOR_FormatYUV420PackedPlanar;
+        } else if (sets.contains(COLOR_TI_FormatYUV420PackedSemiPlanar)) {
+            return COLOR_TI_FormatYUV420PackedSemiPlanar;
+        }
+        return 0;
     }
 }
