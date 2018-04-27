@@ -1,7 +1,6 @@
 package org.easydarwin.push;
 
 import android.content.Context;
-import android.graphics.ImageFormat;
 import android.util.Log;
 
 import org.easydarwin.muxer.EasyMuxer;
@@ -96,6 +95,7 @@ public class SWConsumer extends Thread implements VideoConsumer {
                 buffer = new byte[data.length];
             }
             System.arraycopy(data, 0, buffer, 0, data.length);
+            JNIUtil.yuvConvert(buffer, mWidth, mHeight, 4);
             yuvs.offer(new TimedBuffer(buffer));
             if (time > 0) Thread.sleep(time / 2);
             lastPush = System.currentTimeMillis();

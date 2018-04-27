@@ -1,35 +1,23 @@
 package org.easydarwin.push;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.ImageFormat;
 import android.media.MediaCodec;
-import android.media.MediaCodecInfo;
-import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.text.TextUtils;
 import android.util.Log;
 
 import org.easydarwin.easypusher.BuildConfig;
-import org.easydarwin.hw.EncoderDebugger;
-import org.easydarwin.hw.NV21Convertor;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
-import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar;
 import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar;
 import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar;
 import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar;
+import static org.easydarwin.push.MediaStream.info;
 
 /**
  * Created by apple on 2017/5/13.
@@ -85,15 +73,21 @@ public class HWConsumer extends Thread implements VideoConsumer {
                 time = millisPerframe - time;
                 if (time > 0) Thread.sleep(time / 2);
             }
-            if (format == ImageFormat.YV12) {
-                JNIUtil.yV12ToYUV420P(data, mWidth, mHeight);
+
+
+            if (info.mColorFormat == COLOR_FormatYUV420SemiPlanar) {
+                JNIUtil.yuvConvert(data, mWidth, mHeight, 6);
+            } else if (info.mColorFormat == COLOR_TI_FormatYUV420PackedSemiPlanar) {
+                JNIUtil.yuvConvert(data, mWidth, mHeight, 6);
+            } else if (info.mColorFormat == COLOR_FormatYUV420Planar) {
+                JNIUtil.yuvConvert(data, mWidth, mHeight, 5);
             } else {
-                JNIUtil.nV21To420SP(data, mWidth, mHeight);
+                JNIUtil.yuvConvert(data, mWidth, mHeight, 5);
             }
             int bufferIndex = mMediaCodec.dequeueInputBuffer(0);
             if (bufferIndex >= 0) {
                 ByteBuffer buffer = null;
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     buffer = mMediaCodec.getInputBuffer(bufferIndex);
                 } else {
                     buffer = inputBuffers[bufferIndex];
@@ -111,7 +105,6 @@ public class HWConsumer extends Thread implements VideoConsumer {
         return 0;
     }
 
-    @SuppressLint("WrongConstant")
     @Override
     public void run() {
         MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
@@ -146,7 +139,10 @@ public class HWConsumer extends Thread implements VideoConsumer {
                 }
                 outputBuffer.position(bufferInfo.offset);
                 outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
-
+                EasyMuxer muxer = mMuxer;
+                if (muxer != null) {
+                    muxer.pumpStream(outputBuffer, bufferInfo, true);
+                }
 
                 boolean sync = false;
                 if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {// sps
@@ -161,7 +157,7 @@ public class HWConsumer extends Thread implements VideoConsumer {
                         mPpsSps = new byte[0];
                     }
                 }
-                sync = (bufferInfo.flags & MediaCodec.BUFFER_FLAG_SYNC_FRAME) != 0;
+                sync |= (bufferInfo.flags & MediaCodec.BUFFER_FLAG_SYNC_FRAME) != 0;
                 int len = mPpsSps.length + bufferInfo.size;
                 if (len > h264.length) {
                     h264 = new byte[len];
@@ -169,21 +165,17 @@ public class HWConsumer extends Thread implements VideoConsumer {
                 if (sync) {
                     System.arraycopy(mPpsSps, 0, h264, 0, mPpsSps.length);
                     outputBuffer.get(h264, mPpsSps.length, bufferInfo.size);
-
-                    bufferInfo.offset = 0;
-                    bufferInfo.size = mPpsSps.length + bufferInfo.size;
+                    mPusher.push(h264, 0, mPpsSps.length + bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
+                    if (BuildConfig.DEBUG)
+                        Log.i(TAG, String.format("push i video stamp:%d", bufferInfo.presentationTimeUs / 1000));
                 } else {
                     outputBuffer.get(h264, 0, bufferInfo.size);
+                    mPusher.push(h264, 0, bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
+                    if (BuildConfig.DEBUG)
+                        Log.i(TAG, String.format("push video stamp:%d", bufferInfo.presentationTimeUs / 1000));
                 }
 
 
-                mPusher.push(h264, 0, bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
-                if (BuildConfig.DEBUG)
-                    Log.i(TAG, String.format("push i video stamp:%d", bufferInfo.presentationTimeUs / 1000));
-                EasyMuxer muxer = mMuxer;
-                if (muxer != null) {
-                    muxer.pumpStream(outputBuffer, bufferInfo, true);
-                }
                 mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
             }
         }
@@ -238,17 +230,15 @@ Video bitrate 384 Kbps 2 Mbps 4 Mbps 10 Mbps
 //            bitrate = 2 * width * height;
 //        }
 
-        int bitrate = (int) (mWidth * mHeight * 30 * 2 * 0.07f);
+        int bitrate = (int) (mWidth * mHeight * 20 * 2 * 0.05f);
         if (mWidth >= 1920 || mHeight >= 1920) bitrate *= 0.3;
         else if (mWidth >= 1280 || mHeight >= 1280) bitrate *= 0.4;
         else if (mWidth >= 720 || mHeight >= 720) bitrate *= 0.6;
-        CodecInfo ci = selectCodec(mContext, "video/avc");
-        mMediaCodec = MediaCodec.createByCodecName(ci.mName);
+        mMediaCodec = MediaCodec.createByCodecName(info.mName);
         MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mWidth, mHeight);
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, framerate);
-
-        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, ci.mColorFormat);
+        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, info.mColorFormat);
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
         mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         mMediaCodec.start();
@@ -268,75 +258,4 @@ Video bitrate 384 Kbps 2 Mbps 4 Mbps 10 Mbps
         mMediaCodec.release();
     }
 
-
-
-
-    public static class CodecInfo {
-        public String mName;
-        public int mColorFormat;
-    }
-
-    // mate8 双码流，如果都用google硬编码的话，录像会出现绿屏。因此决定尝试录像用google的硬编，实时流用系统的:"OMX.IMG.TOPAZ.VIDEO.Encoder"
-    public static CodecInfo selectCodec(Context context, String mimeType) throws IOException {
-        ArrayList<CodecInfo> codecInfos = listEncoders(mimeType);
-        if (codecInfos.isEmpty()) {
-            throw new IOException("no encoder!");
-        }
-        return codecInfos.get(0);
-    }
-
-    public static ArrayList<CodecInfo> listEncoders(String mime) {
-        // 可能有多个编码库，都获取一下。。。
-        ArrayList<CodecInfo> codecInfos = new ArrayList<CodecInfo>();
-        int numCodecs = MediaCodecList.getCodecCount();
-        // int colorFormat = 0;
-        // String name = null;
-        for (int i1 = 0; i1 < numCodecs; i1++) {
-            MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(i1);
-            if (!codecInfo.isEncoder()) {
-                continue;
-            }
-            if (codecMatch(mime, codecInfo)) {
-                String name = codecInfo.getName();
-                int colorFormat = getColorFormat(codecInfo, mime);
-                if (colorFormat != 0) {
-                    CodecInfo ci = new CodecInfo();
-                    ci.mName = name;
-                    ci.mColorFormat = colorFormat;
-                    codecInfos.add(ci);
-                }
-            }
-        }
-        return codecInfos;
-    }
-
-    public static boolean codecMatch(String mimeType, MediaCodecInfo codecInfo) {
-        String[] types = codecInfo.getSupportedTypes();
-        for (String type : types) {
-            if (type.equalsIgnoreCase(mimeType)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static int getColorFormat(MediaCodecInfo codecInfo, String mimeType) {
-        MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
-        int[] cf = new int[capabilities.colorFormats.length];
-        System.arraycopy(capabilities.colorFormats, 0, cf, 0, cf.length);
-        List<Integer> sets = new ArrayList<>();
-        for (int i = 0; i < cf.length; i++) {
-            sets.add(cf[i]);
-        }
-        if (sets.contains(COLOR_FormatYUV420SemiPlanar)) {
-            return COLOR_FormatYUV420SemiPlanar;
-        } else if (sets.contains(COLOR_FormatYUV420Planar)) {
-            return COLOR_FormatYUV420Planar;
-        } else if (sets.contains(COLOR_FormatYUV420PackedPlanar)) {
-            return COLOR_FormatYUV420PackedPlanar;
-        } else if (sets.contains(COLOR_TI_FormatYUV420PackedSemiPlanar)) {
-            return COLOR_TI_FormatYUV420PackedSemiPlanar;
-        }
-        return 0;
-    }
 }

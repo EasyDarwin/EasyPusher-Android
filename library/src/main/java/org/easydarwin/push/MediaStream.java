@@ -19,6 +19,8 @@ import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.media.MediaCodec;
+import android.media.MediaCodecInfo;
+import android.media.MediaCodecList;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Environment;
@@ -60,12 +62,19 @@ import java.io.StringWriter;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+
+import static android.graphics.ImageFormat.NV21;
+import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar;
+import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar;
+import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar;
+import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar;
 
 
 public class MediaStream extends Service implements LifecycleObserver {
@@ -164,9 +173,6 @@ public class MediaStream extends Service implements LifecycleObserver {
     private EasyMuxer mMuxer;
     private HandlerThread mCameraThread;
     private Handler mCameraHandler;
-    private EncoderDebugger debugger;
-    private int previewFormat;
-    private boolean shouldStartPreview;
     private boolean cameraOpened;
     static ServiceConnection conn;
     static PushScreenService pushScreenService;
@@ -175,6 +181,13 @@ public class MediaStream extends Service implements LifecycleObserver {
     private Subscriber<? super Object> mSwitchCameraSubscriber;
     private Throwable uvcError;
     private InitCallback _callback;
+
+
+    public static class CodecInfo {
+        public String mName;
+        public int mColorFormat;
+    }
+    public static CodecInfo info = new CodecInfo();
 
     public void pushScreen(final int resultCode, final Intent data, final String ip, final String port, final String id) {
         if (resultCode != Activity.RESULT_OK) {
@@ -428,11 +441,7 @@ public class MediaStream extends Service implements LifecycleObserver {
                 int cameraRotationOffset = camInfo.orientation;
 
                 if (cameraRotationOffset % 180 != 0) {
-                    if (previewFormat == ImageFormat.YV12) {
-                        yuvRotate(data, 0, width, height, cameraRotationOffset);
-                    } else {
-                        yuvRotate(data, 1, width, height, cameraRotationOffset);
-                    }
+                    yuvRotate(data, 1, width, height, cameraRotationOffset);
                 }
                 save2file(data, String.format("/sdcard/yuv_%d_%d.yuv", height, width));
             }
@@ -441,7 +450,7 @@ public class MediaStream extends Service implements LifecycleObserver {
                 txt = "EasyPusher " + new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
                 overlay.overlay(data, txt);
             }
-            mVC.onVideo(data, previewFormat);
+            mVC.onVideo(data, NV21);
             mCamera.addCallbackBuffer(data);
         } else {
             if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_video_overlay", true)) {
@@ -449,7 +458,7 @@ public class MediaStream extends Service implements LifecycleObserver {
                 txt = "EasyPusher " + new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
                 overlay.overlay(data, txt);
             }
-            mVC.onVideo(data, previewFormat);
+            mVC.onVideo(data, NV21);
         }
     }
 
@@ -624,9 +633,29 @@ public class MediaStream extends Service implements LifecycleObserver {
         }
 
         if (mCamera != null) return;
+        if (Thread.currentThread() != mCameraThread) {
+            mCameraHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT);
+                    createCamera();
+                }
+            });
+            return;
+        }
+        if (!enanleVideo) {
+            return;
+        }
         try {
+            mSWCodec = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key-sw-codec", false);
             mCamera = Camera.open(mCameraId);
-
+            mCamera.setErrorCallback(new Camera.ErrorCallback() {
+                @Override
+                public void onError(int i, Camera camera) {
+                    throw new IllegalStateException("Camera Error:" + i);
+                }
+            });
+            Log.i(TAG, "open Camera");
 
             Camera.Parameters parameters = mCamera.getParameters();
             int[] max = determineMaximumSupportedFramerate(parameters);
@@ -639,10 +668,15 @@ public class MediaStream extends Service implements LifecycleObserver {
             parameters.setRotation(rotate);
             parameters.setRecordingHint(true);
 
-            debugger = EncoderDebugger.debug(mApplicationContext, width, height);
 
-            previewFormat = mSWCodec ? ImageFormat.YV12 : debugger.getNV21Convertor().getPlanar() ? ImageFormat.YV12 : ImageFormat.NV21;
-            parameters.setPreviewFormat(previewFormat);
+            ArrayList<CodecInfo> infos = listEncoders("video/avc");
+            if (infos.isEmpty()) mSWCodec = true;
+            if (mSWCodec) {
+            } else {
+                CodecInfo ci = infos.get(0);
+                info.mName = ci.mName;
+                info.mColorFormat = ci.mColorFormat;
+            }
 //            List<Camera.Size> sizes = parameters.getSupportedPreviewSizes();
             parameters.setPreviewSize(width, height);
 //            parameters.setPreviewFpsRange(max[0], max[1]);
@@ -666,10 +700,12 @@ public class MediaStream extends Service implements LifecycleObserver {
 //            }
 
             mCamera.setParameters(parameters);
+            Log.i(TAG, "setParameters");
             int displayRotation;
             displayRotation = (cameraRotationOffset - mDgree + 360) % 360;
             mCamera.setDisplayOrientation(displayRotation);
 
+            Log.i(TAG, "setDisplayOrientation");
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -1193,5 +1229,62 @@ public class MediaStream extends Service implements LifecycleObserver {
 
         Intent intent = new Intent(mApplicationContext, UVCCameraService.class);
         mApplicationContext.stopService(intent);
+    }
+
+
+
+    public static ArrayList<CodecInfo> listEncoders(String mime) {
+        // 可能有多个编码库，都获取一下。。。
+        ArrayList<CodecInfo> codecInfos = new ArrayList<CodecInfo>();
+        int numCodecs = MediaCodecList.getCodecCount();
+        // int colorFormat = 0;
+        // String name = null;
+        for (int i1 = 0; i1 < numCodecs; i1++) {
+            MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(i1);
+            if (!codecInfo.isEncoder()) {
+                continue;
+            }
+            if (codecMatch(mime, codecInfo)) {
+                String name = codecInfo.getName();
+                int colorFormat = getColorFormat(codecInfo, mime);
+                if (colorFormat != 0) {
+                    CodecInfo ci = new CodecInfo();
+                    ci.mName = name;
+                    ci.mColorFormat = colorFormat;
+                    codecInfos.add(ci);
+                }
+            }
+        }
+        return codecInfos;
+    }
+
+    public static boolean codecMatch(String mimeType, MediaCodecInfo codecInfo) {
+        String[] types = codecInfo.getSupportedTypes();
+        for (String type : types) {
+            if (type.equalsIgnoreCase(mimeType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static int getColorFormat(MediaCodecInfo codecInfo, String mimeType) {
+        MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
+        int[] cf = new int[capabilities.colorFormats.length];
+        System.arraycopy(capabilities.colorFormats, 0, cf, 0, cf.length);
+        List<Integer> sets = new ArrayList<>();
+        for (int i = 0; i < cf.length; i++) {
+            sets.add(cf[i]);
+        }
+        if (sets.contains(COLOR_FormatYUV420SemiPlanar)) {
+            return COLOR_FormatYUV420SemiPlanar;
+        } else if (sets.contains(COLOR_FormatYUV420Planar)) {
+            return COLOR_FormatYUV420Planar;
+        } else if (sets.contains(COLOR_FormatYUV420PackedPlanar)) {
+            return COLOR_FormatYUV420PackedPlanar;
+        } else if (sets.contains(COLOR_TI_FormatYUV420PackedSemiPlanar)) {
+            return COLOR_TI_FormatYUV420PackedSemiPlanar;
+        }
+        return 0;
     }
 }
