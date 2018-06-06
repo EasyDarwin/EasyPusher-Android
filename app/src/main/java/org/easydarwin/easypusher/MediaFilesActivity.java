@@ -395,9 +395,12 @@ public class MediaFilesActivity extends AppCompatActivity {
                 try {
                     Intent intent = new Intent();
                     intent.setAction(Intent.ACTION_VIEW);
-
-                    Uri fileUri = FileProvider.getUriForFile(getContext(), getString(R.string.org_easydarwin_update_authorities), mSubFiles[holder.getAdapterPosition()]);
-                    intent.setDataAndType(fileUri,"image/*");
+                    try {
+                        Uri fileUri = FileProvider.getUriForFile(getContext(), getString(R.string.org_easydarwin_update_authorities), mSubFiles[holder.getAdapterPosition()]);
+                        intent.setDataAndType(fileUri, "image/*");
+                    }catch (Exception e){
+                        intent.setDataAndType(Uri.fromFile(mSubFiles[holder.getAdapterPosition()]), "image/*");
+                    }
                     startActivity(intent);
                 } catch (ActivityNotFoundException e) {
                     e.printStackTrace();
@@ -407,8 +410,13 @@ public class MediaFilesActivity extends AppCompatActivity {
                     Intent intent = new Intent();
                     intent.setAction(Intent.ACTION_VIEW);
 
-                    Uri fileUri = FileProvider.getUriForFile(getContext(), getString(R.string.org_easydarwin_update_authorities), mSubFiles[holder.getAdapterPosition()]);
-                    intent.setDataAndType(fileUri, "video/*");
+                    try {
+                        Uri fileUri = FileProvider.getUriForFile(getContext(), getString(R.string.org_easydarwin_update_authorities), mSubFiles[holder.getAdapterPosition()]);
+                        intent.setDataAndType(fileUri, "video/*");
+                    } catch(Exception e){
+                        intent.setDataAndType(Uri.fromFile(mSubFiles[holder.getAdapterPosition()]), "video/*");
+                    }
+
                     startActivity(intent);
                 } catch (ActivityNotFoundException e) {
                     e.printStackTrace();
