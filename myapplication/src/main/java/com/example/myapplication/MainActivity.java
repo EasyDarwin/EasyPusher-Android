@@ -17,11 +17,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.easydarwin.push.MediaStream;
-import org.easydarwin.push.UVCCameraService;
 
 import io.reactivex.Single;
 import io.reactivex.functions.Consumer;
-import io.reactivex.functions.Function;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -98,18 +96,22 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
                 TextureView textureView = findViewById(R.id.texture_view);
-                textureView.setSurfaceTextureListener(new SurfaceTextureListenerWrapper() {
-                    @Override
-                    public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
-                        ms.setSurfaceTexture(surfaceTexture);
-                    }
-                    @Override
-                    public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
-                        ms.setSurfaceTexture(null);
-                        return true;
-                    }
-                });
+                if (textureView.isAvailable()) {
+                    ms.setSurfaceTexture(textureView.getSurfaceTexture());
+                } else {
+                    textureView.setSurfaceTextureListener(new SurfaceTextureListenerWrapper() {
+                        @Override
+                        public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
+                            ms.setSurfaceTexture(surfaceTexture);
+                        }
 
+                        @Override
+                        public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
+                            ms.setSurfaceTexture(null);
+                            return true;
+                        }
+                    });
+                }
 
                 if (ActivityCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
                         ActivityCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {

@@ -43,7 +43,6 @@ import org.easydarwin.audio.AudioStream;
 import org.easydarwin.easypusher.BuildConfig;
 import org.easydarwin.easypusher.EasyApplication;
 import org.easydarwin.easyrtmp.push.EasyRTMP;
-import org.easydarwin.hw.EncoderDebugger;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
 import org.easydarwin.sw.TxtOverlay;
@@ -616,6 +615,14 @@ public class MediaStream extends Service implements LifecycleObserver {
         if (!enanleVideo) {
             return;
         }
+        ArrayList<CodecInfo> infos = listEncoders("video/avc");
+        if (infos.isEmpty()) mSWCodec = true;
+        if (mSWCodec) {
+        } else {
+            CodecInfo ci = infos.get(0);
+            info.mName = ci.mName;
+            info.mColorFormat = ci.mColorFormat;
+        }
         if (mCameraId == 2) {
             UVCCamera value = UVCCameraService.liveData.getValue();
             if (value != null) {
@@ -668,15 +675,6 @@ public class MediaStream extends Service implements LifecycleObserver {
             parameters.setRotation(rotate);
             parameters.setRecordingHint(true);
 
-
-            ArrayList<CodecInfo> infos = listEncoders("video/avc");
-            if (infos.isEmpty()) mSWCodec = true;
-            if (mSWCodec) {
-            } else {
-                CodecInfo ci = infos.get(0);
-                info.mName = ci.mName;
-                info.mColorFormat = ci.mColorFormat;
-            }
 //            List<Camera.Size> sizes = parameters.getSupportedPreviewSizes();
             parameters.setPreviewSize(width, height);
 //            parameters.setPreviewFpsRange(max[0], max[1]);
