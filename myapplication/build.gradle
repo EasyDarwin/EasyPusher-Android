@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 26
-    buildToolsVersion '26.0.2'
+    buildToolsVersion '27.0.3'
 
 
     lintOptions {
@@ -21,7 +21,7 @@ android {
 
         ndk {
             //设置支持的SO库架构（开发者可以根据需要，选择一个或多个平台的so）
-            abiFilters "armeabi-v7a"//, "x86"//, "arm64-v8a", ,"arm64-v8a","x86_64"
+            abiFilters "armeabi-v7a", "x86"//, "arm64-v8a", ,"arm64-v8a","x86_64"
         }
     }
 
@@ -42,16 +42,16 @@ repositories {
 }
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile 'com.android.support:appcompat-v7:26.1.0'
-    compile 'com.android.support.constraint:constraint-layout:1.0.2'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation 'com.android.support.constraint:constraint-layout:1.0.2'
     implementation project(':library')
-    compile(name: 'libuvccamera-release', ext: 'aar') {
+    implementation(name: 'libuvccamera-release', ext: 'aar') {
         exclude module: 'support-v4'
         exclude module: 'appcompat-v7'
     }
-    compile 'io.reactivex.rxjava2:rxjava:2.1.6'
-    compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
+    implementation 'io.reactivex.rxjava2:rxjava:2.1.6'
+    implementation 'io.reactivex.rxjava2:rxandroid:2.0.1'
     implementation 'android.arch.lifecycle:extensions:1.0.0'
     implementation 'android.arch.lifecycle:reactivestreams:1.0.0'
     annotationProcessor "android.arch.lifecycle:compiler:1.0.0"

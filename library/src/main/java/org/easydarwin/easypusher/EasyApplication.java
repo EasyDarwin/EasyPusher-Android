@@ -117,8 +117,4 @@ public class EasyApplication extends Application {
         return ip;
     }
 
-    public static boolean isRTMP() {
-        return "rtmp".equals(BuildConfig.FLAVOR);
-    }
-
 }

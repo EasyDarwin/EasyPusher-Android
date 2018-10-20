@@ -20,18 +20,14 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
-import android.provider.MediaStore;
 import android.support.annotation.Nullable;
-import android.support.v4.app.NotificationCompat;
-import android.text.TextUtils;
+import android.support.annotation.RequiresApi;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Surface;
 import android.view.WindowManager;
 
-import org.easydarwin.easypusher.EasyApplication;
 import org.easydarwin.easypusher.R;
-import org.easydarwin.easyrtmp.push.EasyRTMP;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -69,6 +65,11 @@ public class PushScreenService extends Service {
             MediaStream.stopPushScreen(app);
         }
     };
+    private final Pusher mEasyPusher = new EasyPusher();
+    private String ip;
+    private String port;
+    private String id;
+    private MediaStream.PushingScreenLiveData liveData;
 
 
     public class MyBinder extends Binder
@@ -85,6 +86,7 @@ public class PushScreenService extends Service {
         return binder;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void onCreate() {
         super.onCreate();
@@ -133,7 +135,7 @@ public class PushScreenService extends Service {
         windowHeight *= 16;
     }
 
-    private void startPush(final Pusher pusher, final MediaStream.PushingScreenLiveData liveData) {
+    private void startPush() {
 //        liveData.postValue(new MediaStream.PushingState(0, "未开始", true));
         mPushThread = new Thread(){
             @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -144,49 +146,104 @@ public class PushScreenService extends Service {
                         .setSmallIcon(R.drawable.ic_pusher_screen_pushing)
                         .addAction(new Notification.Action(R.drawable.ic_close_pushing_screen, "关闭",
                                 PendingIntent.getBroadcast(getApplicationContext(), 10000, new Intent(ACTION_CLOSE_PUSHING_SCREEN), FLAG_CANCEL_CURRENT))).build());
-                while (mPushThread != null) {
-                    int index = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 10000);
-                    Log.d(TAG, "dequeue output buffer index=" + index);
 
-                    if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {//请求超时
-                        try {
-                            // wait 10ms
-                            Thread.sleep(10);
-                        } catch (InterruptedException e) {
+                final String url = String.format("rtsp://%s:%s/%s.sdp", ip, port, id);
+                InitCallback _callback = new InitCallback() {
+                    @Override
+                    public void onCallback(int code) {
+                        String msg = "";
+                        switch (code) {
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_INVALID_KEY:
+                                msg = ("无效Key");
+                                break;
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_SUCCESS:
+                                msg = ("未开始");
+                                break;
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECTING:
+                                msg = ("连接中");
+                                break;
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECTED:
+                                msg = ("连接成功");
+                                break;
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECT_FAILED:
+                                msg = ("连接失败");
+                                break;
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECT_ABORT:
+                                msg = ("连接异常中断");
+                                break;
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_PUSHING:
+                                msg = ("推流中");
+                                break;
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_DISCONNECTED:
+                                msg = ("断开连接");
+                                break;
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_PLATFORM_ERR:
+                                msg = ("平台不匹配");
+                                break;
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_COMPANY_ID_LEN_ERR:
+                                msg = ("断授权使用商不匹配");
+                                break;
+                            case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_PROCESS_NAME_LEN_ERR:
+                                msg = ("进程名称长度不匹配");
+                                break;
                         }
-                    } else if (index >= 0) {//有效输出
+                        liveData.postValue(new MediaStream.PushingState(url, code, msg, true));
+                    }
+                };
+//        startStream(ip, port, id, _callback);
+                mEasyPusher.initPush( getApplicationContext(), _callback);
+                mEasyPusher.setMediaInfo(Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
+                mEasyPusher.start(ip, port, String.format("%s.sdp", id), Pusher.TransType.EASY_RTP_OVER_TCP);
+                try {
+                    while (mPushThread != null) {
+                        int index = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 10000);
+                        Log.d(TAG, "dequeue output buffer index=" + index);
 
-                        ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(index);
+                        if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {//请求超时
+                            try {
+                                // wait 10ms
+                                Thread.sleep(10);
+                            } catch (InterruptedException e) {
+                            }
+                        } else if (index >= 0) {//有效输出
+
+                            ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(index);
 
 
-                        byte[] outData = new byte[mBufferInfo.size];
-                        outputBuffer.get(outData);
+                            byte[] outData = new byte[mBufferInfo.size];
+                            outputBuffer.get(outData);
 
 //                        String data0 = String.format("%x %x %x %x %x %x %x %x %x %x ", outData[0], outData[1], outData[2], outData[3], outData[4], outData[5], outData[6], outData[7], outData[8], outData[9]);
 //                        Log.e("out_data", data0);
 
-                        //记录pps和sps
-                        int type = outData[4] & 0x07;
-                        if (type == 7 || type == 8) {
-                            mPpsSps = outData;
-                        } else if (type == 5) {
-                            //在关键帧前面加上pps和sps数据
-                            if (mPpsSps != null) {
-                                byte[] iframeData = new byte[mPpsSps.length + outData.length];
-                                System.arraycopy(mPpsSps, 0, iframeData, 0, mPpsSps.length);
-                                System.arraycopy(outData, 0, iframeData, mPpsSps.length, outData.length);
-                                outData = iframeData;
+                            //记录pps和sps
+                            int type = outData[4] & 0x07;
+                            if (type == 7 || type == 8) {
+                                Log.i(TAG, "Video metadata!");
+                                mPpsSps = outData;
+                            } else if (type == 5) {
+                                Log.i(TAG, "Video key frame!");
+                                //在关键帧前面加上pps和sps数据
+                                if (mPpsSps != null) {
+                                    byte[] iframeData = new byte[mPpsSps.length + outData.length];
+                                    System.arraycopy(mPpsSps, 0, iframeData, 0, mPpsSps.length);
+                                    System.arraycopy(outData, 0, iframeData, mPpsSps.length, outData.length);
+                                    outData = iframeData;
+                                }
                             }
+
+                            mEasyPusher.push(outData, mBufferInfo.presentationTimeUs / 1000, 1);
+
+
+                            mMediaCodec.releaseOutputBuffer(index, false);
                         }
 
-                        pusher.push(outData, mBufferInfo.presentationTimeUs/1000, 1);
-
-
-                        mMediaCodec.releaseOutputBuffer(index, false);
                     }
-
+                    stopForeground(true);
+                }finally {
+                    mEasyPusher.stop();
+                    liveData.postValue(new MediaStream.PushingState("", 0, "未开始", true));
                 }
-                stopForeground(true);
             }
         };
         mPushThread.start();
@@ -207,7 +264,7 @@ public class PushScreenService extends Service {
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    void startVirtualDisplay(int resultCode, Intent resultData, MediaStream.PushingScreenLiveData liveData,Pusher pusher) {
+    void startVirtualDisplay(int resultCode, Intent resultData, String ip, String port, String id, final MediaStream.PushingScreenLiveData liveData) {
 
         try {
             configureMedia();
@@ -227,7 +284,13 @@ public class PushScreenService extends Service {
         mVirtualDisplay = mMpj.createVirtualDisplay("record_screen", windowWidth, windowHeight, screenDensity,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR|DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC|DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION, mSurface, null, null);
 
-        startPush(pusher, liveData);
+
+        this.ip = ip;
+        this.port = port;
+        this.id = id;
+        this.liveData = liveData;
+
+        startPush();
     }
 
 

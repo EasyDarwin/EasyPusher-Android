@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
                             // 更改屏幕推送按钮状态.
 
                             TextView tview = findViewById(R.id.pushing_desktop);
-                            if (pushingState.state > 0) {
+                            if (ms.isScreenPushing()) {
                                 tview.setText("取消推送");
                             } else {
                                 tview.setText("推送屏幕");
@@ -80,14 +80,13 @@ public class MainActivity extends AppCompatActivity {
                             findViewById(R.id.pushing_desktop).setEnabled(true);
                         } else {
                             pushingStateText.setText("推送");
-
-                            if (pushingState.state > 0) {
+                            if (ms.isCameraPushing()) {
                                 pushingBtn.setText("停止");
                             } else {
                                 pushingBtn.setText("推送");
                             }
-
                         }
+
                         pushingStateText.append(":\t" + pushingState.msg);
                         if (pushingState.state > 0) {
                             pushingStateText.append(pushingState.url);
@@ -174,13 +173,12 @@ public class MainActivity extends AppCompatActivity {
     public void onPushScreen(final View view) {
         getMediaStream().subscribe(new Consumer<MediaStream>() {
             @Override
-            public void accept(MediaStream mediaStream) throws Exception {
-                MediaStream.PushingState state = mediaStream.getScreenPushingState();
-                if (state != null && state.state > 0) {
+            public void accept(MediaStream mediaStream) {
+                if (mediaStream.isScreenPushing()) { // 正在推送，那取消推送。
                     // 取消推送。
                     mediaStream.stopPushScreen();
-                } else {
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                } else {    // 没在推送，那启动推送。
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {     // lollipop 以前版本不支持。
                         return;
                     }
                     MediaProjectionManager mMpMngr = (MediaProjectionManager) getApplicationContext().getSystemService(MEDIA_PROJECTION_SERVICE);
@@ -197,8 +195,8 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_MEDIA_PROJECTION) {
             getMediaStream().subscribe(new Consumer<MediaStream>() {
                 @Override
-                public void accept(MediaStream mediaStream) throws Exception {
-                    mediaStream.pushScreen(resultCode, data, "cloud.easydarwin.org", "554", "screen");
+                public void accept(MediaStream mediaStream) {
+                    mediaStream.pushScreen(resultCode, data, "cloud.easydarwin.org", "554", "screen111");
                 }
             });
         }

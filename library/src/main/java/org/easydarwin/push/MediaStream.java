@@ -41,8 +41,6 @@ import com.serenegiant.usb.UVCCamera;
 
 import org.easydarwin.audio.AudioStream;
 import org.easydarwin.easypusher.BuildConfig;
-import org.easydarwin.easypusher.EasyApplication;
-import org.easydarwin.easyrtmp.push.EasyRTMP;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
 import org.easydarwin.sw.TxtOverlay;
@@ -82,6 +80,7 @@ public class MediaStream extends Service implements LifecycleObserver {
     public static final String EXTRA_ENABLE_AUDIO = "extra-enable-audio";
     private MediaBinder binder = new MediaBinder();
     private boolean mIsRecording;
+    private boolean cameraPushing;
 
     @Nullable
     @Override
@@ -152,9 +151,8 @@ public class MediaStream extends Service implements LifecycleObserver {
     private static final boolean VERBOSE = BuildConfig.DEBUG;
     private static final int SWITCH_CAMERA = 11;
     private boolean enanleVideo = true;
-    private InitCallback callback;
     private Lifecycle lifecycle;
-    private Pusher mEasyPusher;
+    private final Pusher mEasyPusher = new EasyPusher();
     static final String TAG = "EasyPusher";
     int width = 640, height = 480;
     int framerate, bitrate;
@@ -179,7 +177,6 @@ public class MediaStream extends Service implements LifecycleObserver {
     private int mTargetCameraId;
     private Subscriber<? super Object> mSwitchCameraSubscriber;
     private Throwable uvcError;
-    private InitCallback _callback;
 
 
     public static class CodecInfo {
@@ -188,6 +185,13 @@ public class MediaStream extends Service implements LifecycleObserver {
     }
     public static CodecInfo info = new CodecInfo();
 
+
+    public void startStream(String ip, String port, String id, InitCallback callback) {
+        mEasyPusher.initPush( mApplicationContext, callback);
+        mEasyPusher.setMediaInfo(Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
+        mEasyPusher.start(ip, port, String.format("%s.sdp", id), Pusher.TransType.EASY_RTP_OVER_TCP);
+    }
+
     public void pushScreen(final int resultCode, final Intent data, final String ip, final String port, final String id) {
         if (resultCode != Activity.RESULT_OK) {
             pushingScreenLiveData.postValue(new PushingState("", -3003, "用户取消", true));
@@ -195,71 +199,34 @@ public class MediaStream extends Service implements LifecycleObserver {
             return;
         }
         stopStream();
-        _callback = new InitCallback() {
-            String url = String.format("rtsp://%s:%s/%s.sdp", ip, port, id);
-            @Override
-            public void onCallback(int code) {
-                String msg = "";
-                switch (code) {
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_INVALID_KEY:
-                        msg = ("无效Key");
-                        break;
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_SUCCESS:
-                        msg = ("未开始");
-                        break;
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECTING:
-                        msg = ("连接中");
-                        break;
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECTED:
-                        msg = ("连接成功");
-                        break;
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECT_FAILED:
-                        msg = ("连接失败");
-                        break;
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_CONNECT_ABORT:
-                        msg = ("连接异常中断");
-                        break;
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_PUSHING:
-                        msg = ("推流中");
-                        break;
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_PUSH_STATE_DISCONNECTED:
-                        msg = ("断开连接");
-                        break;
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_PLATFORM_ERR:
-                        msg = ("平台不匹配");
-                        break;
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_COMPANY_ID_LEN_ERR:
-                        msg = ("断授权使用商不匹配");
-                        break;
-                    case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_PROCESS_NAME_LEN_ERR:
-                        msg = ("进程名称长度不匹配");
-                        break;
-                }
-                pushingScreenLiveData.postValue(new PushingState(url, code, msg, true));
-            }
-        };
-        mEasyPusher.initPush(ip, port, String.format("%s.sdp", id), mApplicationContext, callback);
         if (TextUtils.isEmpty(ip) || TextUtils.isEmpty(port) || TextUtils.isEmpty(id)) {
             pushingScreenLiveData.postValue(new PushingState("", -3002, "参数异常", true));
             return;
         }
-        Intent intent = new Intent(mApplicationContext, PushScreenService.class);
 
-        conn = new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName name, IBinder service) {
-                PushScreenService.MyBinder binder = (PushScreenService.MyBinder) service;
-                pushScreenService = binder.getService();
-                pushScreenService.startVirtualDisplay(resultCode, data, pushingScreenLiveData, mEasyPusher);
-            }
 
-            @Override
-            public void onServiceDisconnected(ComponentName name) {
-                pushScreenService = null;
-                pushingScreenLiveData.postValue(new PushingState("", 0, "未开始", true));
-            }
-        };
-        mApplicationContext.bindService(intent, conn, Context.BIND_AUTO_CREATE);
+        if (pushScreenService != null) {
+            stopPushScreen();
+
+        }else{
+            Intent intent = new Intent(mApplicationContext, PushScreenService.class);
+
+            conn = new ServiceConnection() {
+                @Override
+                public void onServiceConnected(ComponentName name, IBinder service) {
+                    PushScreenService.MyBinder binder = (PushScreenService.MyBinder) service;
+                    pushScreenService = binder.getService();
+                    pushScreenService.startVirtualDisplay(resultCode, data, ip, port, id, pushingScreenLiveData);
+                }
+
+                @Override
+                public void onServiceDisconnected(ComponentName name) {
+                    pushScreenService = null;
+                    pushingScreenLiveData.postValue(new PushingState("", 0, "未开始", true));
+                }
+            };
+            mApplicationContext.bindService(intent, conn, Context.BIND_AUTO_CREATE);
+        }
     }
 
     public void stopPushScreen() {
@@ -397,9 +364,6 @@ public class MediaStream extends Service implements LifecycleObserver {
         }
 
         mSurfaceHolderRef = new WeakReference(null);
-        if (EasyApplication.isRTMP())
-            mEasyPusher = new EasyRTMP();
-        else mEasyPusher = new EasyPusher();
         mCameraThread = new HandlerThread("CAMERA") {
             public void run() {
                 try {
@@ -466,8 +430,9 @@ public class MediaStream extends Service implements LifecycleObserver {
     public void startStream(final String ip, final String port, final String id) {
 
         stopStream();
-
-        callback = new InitCallback() {
+        stopPushScreen();
+        cameraPushing = true;
+        InitCallback callback = new InitCallback() {
             @Override
             public void onCallback(int code) {
                 String msg = "";
@@ -511,7 +476,8 @@ public class MediaStream extends Service implements LifecycleObserver {
             }
         };
 
-        mEasyPusher.initPush(ip, port, String.format("%s.sdp", id), mApplicationContext, callback);
+//        mEasyPusher.initPush(ip, port, String.format("%s.sdp", id), mApplicationContext, callback);
+        startStream(ip,port,id, callback);
     }
 
 
@@ -530,6 +496,15 @@ public class MediaStream extends Service implements LifecycleObserver {
         return pushingStateLiveData.getValue();
     }
 
+
+    public boolean isScreenPushing(){
+        return pushScreenService != null;
+    }
+
+
+    public boolean isCameraPushing(){
+        return cameraPushing;
+    }
 
     public PushingState getScreenPushingState() {
         return pushingScreenLiveData.getValue();
@@ -1144,12 +1119,14 @@ public class MediaStream extends Service implements LifecycleObserver {
     public void stopStream() {
         mEasyPusher.stop();
         pushingStateLiveData.postValue(new PushingState(0, "未开始"));
-        pushingScreenLiveData.postValue(new PushingState("", 0, "未开始", true));
+//        pushingScreenLiveData.postValue(new PushingState("", 0, "未开始", true));
 
-        if (pushScreenService != null) {
-            mApplicationContext.unbindService(conn);
-            pushScreenService = null;
-        }
+//        if (pushScreenService != null) {
+//            mApplicationContext.unbindService(conn);
+//            pushScreenService = null;
+//        }
+
+        cameraPushing = false;
     }
 
     @MainThread
