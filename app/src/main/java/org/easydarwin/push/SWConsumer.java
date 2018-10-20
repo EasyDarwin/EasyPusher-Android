@@ -1,7 +1,6 @@
 package org.easydarwin.push;
 
 import android.content.Context;
-import android.graphics.ImageFormat;
 import android.util.Log;
 
 import org.easydarwin.muxer.EasyMuxer;
@@ -21,6 +20,7 @@ public class SWConsumer extends Thread implements VideoConsumer {
     private X264Encoder x264;
     private final Pusher mPusher;
     private volatile boolean mVideoStarted;
+    private byte []yv12;
     public SWConsumer(Context context, Pusher pusher){
         mPusher = pusher;
     }
@@ -95,8 +95,7 @@ public class SWConsumer extends Thread implements VideoConsumer {
             if (buffer == null || buffer.length != data.length) {
                 buffer = new byte[data.length];
             }
-            System.arraycopy(data, 0, buffer, 0, data.length);
-            JNIUtil.yuvConvert(buffer, mWidth, mHeight, 4);
+            JNIUtil.ConvertFromI420(data, buffer, mWidth, mHeight, 1);
             yuvs.offer(new TimedBuffer(buffer));
             if (time > 0) Thread.sleep(time / 2);
             lastPush = System.currentTimeMillis();

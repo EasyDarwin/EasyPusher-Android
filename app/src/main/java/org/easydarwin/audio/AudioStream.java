@@ -7,11 +7,8 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Process;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
-import org.easydarwin.easypusher.BuildConfig;
-import org.easydarwin.easypusher.RecordService;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.push.Pusher;
 
@@ -21,7 +18,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import javax.inject.Inject;
+
 
 public class AudioStream {
     private static AudioStream _this;
