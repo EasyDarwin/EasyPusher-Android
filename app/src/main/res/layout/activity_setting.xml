@@ -84,12 +84,37 @@
         android:checked="false"
         android:text="叠加水印" />
 
-    <CheckBox
-        android:id="@+id/only_push_audio"
+    <TextView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:checked="false"
-        android:text="仅推送音频" />
+        android:layout_marginTop="@dimen/activity_vertical_margin"
+        android:text="推送内容："
+        android:layout_height="wrap_content" />
+    <RadioGroup
+        android:layout_width="match_parent"
+        android:tooltipText="推送内容"
+        android:id="@+id/push_content"
+        android:orientation="vertical"
+        android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:layout_height="wrap_content">
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:text="推送音视频"
+            android:checked="true"
+            android:id="@+id/push_av"
+            android:layout_height="wrap_content" />
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:text="仅推送视频"
+            android:checked="false"
+            android:id="@+id/push_v"
+            android:layout_height="wrap_content" />
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:text="仅推送音频"
+            android:checked="false"
+            android:id="@+id/push_a"
+            android:layout_height="wrap_content" />
+    </RadioGroup>
 
     <Button
         android:layout_width="match_parent"

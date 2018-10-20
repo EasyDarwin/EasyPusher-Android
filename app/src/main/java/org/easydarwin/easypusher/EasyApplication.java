@@ -21,6 +21,7 @@ import java.io.InputStream;
 public class EasyApplication extends Application {
 
     public static final String KEY_ENABLE_VIDEO = "key-enable-video";
+    public static final String KEY_ENABLE_AUDIO = "key-enable-audio";
     private static EasyApplication mApplication;
 
 

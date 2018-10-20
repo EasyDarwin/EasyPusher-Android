@@ -1,5 +1,6 @@
 package org.easydarwin.audio;
 
+import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaCodec;
@@ -7,8 +8,10 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Process;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
+import org.easydarwin.easypusher.EasyApplication;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.push.Pusher;
 
@@ -22,6 +25,7 @@ import java.util.Set;
 
 public class AudioStream {
     private static AudioStream _this;
+    private final Context context;
     EasyMuxer muxer;
     private int samplingRate = 8000;
     private int bitRate = 16000;
@@ -59,7 +63,8 @@ public class AudioStream {
     private Thread mWriter;
     private MediaFormat newFormat;
 
-    public AudioStream() {
+    public AudioStream(Context context) {
+        this.context = context;
         int i = 0;
         for (; i < AUDIO_SAMPLING_RATES.length; i++) {
             if (AUDIO_SAMPLING_RATES[i] == samplingRate) {
@@ -165,8 +170,9 @@ public class AudioStream {
                 }
             }
         }, "AACRecoder");
-        mThread.start();
-
+        if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("key-enable-audio",true)) {
+            mThread.start();
+        }
     }
 
 
@@ -179,7 +185,8 @@ public class AudioStream {
     }
 
     public static synchronized AudioStream getInstance() {
-        if (_this == null) _this = new AudioStream();
+        EasyApplication app = EasyApplication.getEasyApplication();
+        if (_this == null) _this = new AudioStream(app);
         return _this;
     }
 
