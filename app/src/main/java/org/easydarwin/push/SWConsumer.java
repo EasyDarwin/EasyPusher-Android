@@ -1,12 +1,15 @@
 package org.easydarwin.push;
 
 import android.content.Context;
+import android.media.MediaCodec;
+import android.media.MediaFormat;
 import android.util.Log;
 
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
 import org.easydarwin.sw.X264Encoder;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 
 /**
@@ -21,6 +24,9 @@ public class SWConsumer extends Thread implements VideoConsumer {
     private final Pusher mPusher;
     private volatile boolean mVideoStarted;
     private byte []yv12;
+    private EasyMuxer muxer;
+    private MediaFormat newFormat;
+
     public SWConsumer(Context context, Pusher pusher){
         mPusher = pusher;
     }
@@ -56,20 +62,61 @@ public class SWConsumer extends Thread implements VideoConsumer {
         byte[]h264 = new byte[mWidth*mHeight*3/2];
         byte[] keyFrm = new byte[1];
         int []outLen = new int[1];
+        MediaCodec.BufferInfo bi = new MediaCodec.BufferInfo();
         do {
             try {
                 int r = 0;
                 TimedBuffer tb = yuvs.take();
                 byte[] data = tb.buffer;
                 long begin = System.currentTimeMillis();
+                keyFrm[0] = 0;
                 r = x264.encode(data, 0, h264, 0, outLen, keyFrm);
                 if (r > 0) {
                     Log.i(TAG, String.format("encode spend:%d ms. keyFrm:%d", System.currentTimeMillis() - begin, keyFrm[0]));
 //                                newBuf = new byte[outLen[0]];
 //                                System.arraycopy(h264, 0, newBuf, 0, newBuf.length);
                 }
-                keyFrm[0] = 0;
+                if (keyFrm[0] == 1){
+                    synchronized (SWConsumer.this) {
+                        if (newFormat == null) {
+                            // init format
+
+                            MediaFormat fmt = new MediaFormat();
+                            byte[] dataOut = new byte[128];
+                            int[] dataOutLen = new int[]{128};
+                            int result = getXPS(h264, 0, 256, dataOut, dataOutLen, 7);
+                            if (result >= 0) {
+                                ByteBuffer csd0 = ByteBuffer.allocate(dataOutLen[0]);
+                                csd0.put(dataOut, 0, dataOutLen[0]);
+                                csd0.clear();
+                                Log.i(TAG, String.format("CSD-0 searched"));
+                                fmt.setByteBuffer("csd-0", csd0);
+                            }
+                            dataOutLen[0] = 128;
+                            result = getXPS(h264, 0, 256, dataOut, dataOutLen, 8);
+                            if (result >= 0) {
+                                ByteBuffer csd1 = ByteBuffer.allocate(dataOutLen[0]);
+                                csd1.put(dataOut, 0, dataOutLen[0]);
+                                csd1.clear();
+                                Log.i(TAG, String.format("CSD-1 searched"));
+                                fmt.setByteBuffer("csd-1", csd1);
+                            }
+                            fmt.setInteger("width", mWidth);
+                            fmt.setInteger("height", mHeight);
+                            newFormat = fmt;
+                            if (muxer != null) muxer.addTrack(newFormat, true);
+                        }
+                    }
+                }
                 yuv_caches.offer(data);
+                synchronized (SWConsumer.this){
+                    if (muxer != null) {
+                        bi.flags = 0;
+                        bi.flags |= keyFrm[0] == 1 ? MediaCodec.BUFFER_FLAG_KEY_FRAME : 0;
+                        ByteBuffer bf = ByteBuffer.wrap(h264, 0, outLen[0]);
+                        muxer.pumpStream(bf, bi, true);
+                    }
+                }
                 mPusher.push(h264, 0, outLen[0], tb.time, 1);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -123,7 +170,55 @@ public class SWConsumer extends Thread implements VideoConsumer {
     }
 
     @Override
-    public void setMuxer(EasyMuxer muxer) {
-
+    public synchronized void setMuxer(EasyMuxer muxer) {
+        if (muxer != null) {
+            if (newFormat != null)
+                muxer.addTrack(newFormat, true);
+        }
+        this.muxer = muxer;
     }
+
+
+    private static int getXPS(byte[] data, int offset, int length, byte[] dataOut, int[] outLen, int type) {
+        int i;
+        int pos0;
+        int pos1;
+        pos0 = -1;
+        length = Math.min(length, data.length);
+        for (i = offset; i < length - 4; i++) {
+            if ((0 == data[i]) && (0 == data[i + 1]) && (1 == data[i + 2]) && (type == (0x0F & data[i + 3]))) {
+                pos0 = i;
+                break;
+            }
+        }
+        if (-1 == pos0) {
+            return -1;
+        }
+        if (pos0 > 0 && data[pos0 - 1] == 0) { // 0 0 0 1
+            pos0 = pos0 - 1;
+        }
+        pos1 = -1;
+        for (i = pos0 + 4; i < length - 4; i++) {
+            if ((0 == data[i]) && (0 == data[i + 1]) && (1 == data[i + 2])) {
+                pos1 = i;
+                break;
+            }
+        }
+        if (-1 == pos1 || pos1 == 0) {
+            return -2;
+        }
+        if (data[pos1 - 1] == 0) {
+            pos1 -= 1;
+        }
+        if (pos1 - pos0 > outLen[0]) {
+            return -3; // 输入缓冲区太小
+        }
+        dataOut[0] = 0;
+        System.arraycopy(data, pos0, dataOut, 0, pos1 - pos0);
+        // memcpy(pXPS+1, pES+pos0, pos1-pos0);
+        // *pMaxXPSLen = pos1-pos0+1;
+        outLen[0] = pos1 - pos0;
+        return pos1;
+    }
+
 }
