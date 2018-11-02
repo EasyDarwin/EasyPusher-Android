@@ -11,13 +11,13 @@ import java.util.Date;
 
 public class RecordVideoConsumer implements VideoConsumerWrapper {
 
-    HWConsumer consumer;
+    VideoConsumer consumer;
     private TxtOverlay overlay;
     private final Context context;
 
-    public RecordVideoConsumer(Context context, EasyMuxer muxer) {
+    public RecordVideoConsumer(Context context, boolean swCodec, EasyMuxer muxer) {
         this.context = context;
-        consumer = new HWConsumer(context, null);
+        consumer = swCodec ? new SWConsumer(context, null):new HWConsumer(context, null);
         consumer.setMuxer(muxer);
     }
 

@@ -326,7 +326,7 @@ public class MediaStream {
         }
         long millis = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getInt("record_interval", 300000);
         mMuxer = new EasyMuxer(new File(recordPath, new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date())).toString(), millis);
-        mRecordVC = new RecordVideoConsumer(mApplicationContext, mMuxer);
+        mRecordVC = new RecordVideoConsumer(mApplicationContext, mSWCodec, mMuxer);
         mRecordVC.onVideoStart(frameWidth, frameHeight);
         if (audioStream != null) {
             audioStream.setMuxer(mMuxer);

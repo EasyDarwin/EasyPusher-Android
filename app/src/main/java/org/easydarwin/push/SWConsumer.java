@@ -49,7 +49,7 @@ public class SWConsumer extends Thread implements VideoConsumer {
 
         public TimedBuffer(byte[] data) {
             buffer = data;
-            time = System.currentTimeMillis();
+            time = System.nanoTime() / 1000000;
         }
     }
 
@@ -81,7 +81,7 @@ public class SWConsumer extends Thread implements VideoConsumer {
                         if (newFormat == null) {
                             // init format
 
-                            MediaFormat fmt = new MediaFormat();
+                            MediaFormat fmt = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, mWidth, mHeight);
                             byte[] dataOut = new byte[128];
                             int[] dataOutLen = new int[]{128};
                             int result = getXPS(h264, 0, 256, dataOut, dataOutLen, 7);
@@ -101,8 +101,6 @@ public class SWConsumer extends Thread implements VideoConsumer {
                                 Log.i(TAG, String.format("CSD-1 searched"));
                                 fmt.setByteBuffer("csd-1", csd1);
                             }
-                            fmt.setInteger("width", mWidth);
-                            fmt.setInteger("height", mHeight);
                             newFormat = fmt;
                             if (muxer != null) muxer.addTrack(newFormat, true);
                         }
@@ -112,12 +110,17 @@ public class SWConsumer extends Thread implements VideoConsumer {
                 synchronized (SWConsumer.this){
                     if (muxer != null) {
                         bi.flags = 0;
+                        bi.presentationTimeUs = tb.time*1000;
                         bi.flags |= keyFrm[0] == 1 ? MediaCodec.BUFFER_FLAG_KEY_FRAME : 0;
+                        bi.offset = 0;
+                        bi.size = outLen[0];
                         ByteBuffer bf = ByteBuffer.wrap(h264, 0, outLen[0]);
                         muxer.pumpStream(bf, bi, true);
                     }
                 }
-                mPusher.push(h264, 0, outLen[0], tb.time, 1);
+                if (mPusher != null) {
+                    mPusher.push(h264, 0, outLen[0], tb.time, 1);
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
