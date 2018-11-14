@@ -8,6 +8,7 @@ import android.preference.PreferenceManager;
 import com.squareup.otto.Bus;
 import com.squareup.otto.Subscribe;
 import com.squareup.otto.ThreadEnforcer;
+import com.tencent.bugly.crashreport.CrashReport;
 
 import org.easydarwin.bus.StartRecord;
 import org.easydarwin.bus.StopRecord;
@@ -33,6 +34,7 @@ public class EasyApplication extends Application {
     public void onCreate() {
         super.onCreate();
         mApplication = this;
+        CrashReport.initCrashReport(getApplicationContext(), BuildConfig.BUGLY_KEY, false);
         // for compatibility
         resetDefaultServer();
         File youyuan = getFileStreamPath("SIMYOU.ttf");

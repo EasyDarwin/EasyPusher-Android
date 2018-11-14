@@ -19,7 +19,7 @@
 
         <TextView
             android:id="@+id/txt_res"
-            android:text="分辨率："
+            android:text="@string/resolution"
             android:textSize="18sp"
             android:textColor="#ffffff"
             android:paddingLeft="@dimen/activity_horizontal_margin"
