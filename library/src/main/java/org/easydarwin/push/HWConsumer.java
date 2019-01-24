@@ -5,6 +5,7 @@ import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 import org.easydarwin.easypusher.BuildConfig;
@@ -17,13 +18,13 @@ import java.nio.ByteBuffer;
 import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar;
 import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar;
 import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar;
-import static org.easydarwin.push.MediaStream.info;
 
 /**
  * Created by apple on 2017/5/13.
  */
 public class HWConsumer extends Thread implements VideoConsumer {
     private static final String TAG = "Pusher";
+    private final MediaStream.CodecInfo info;
     public EasyMuxer mMuxer;
     private final Context mContext;
     private final Pusher mPusher;
@@ -35,9 +36,10 @@ public class HWConsumer extends Thread implements VideoConsumer {
     private volatile boolean mVideoStarted;
     private MediaFormat newFormat;
 
-    public HWConsumer(Context context, Pusher pusher) {
+    public HWConsumer(Context context, Pusher pusher, MediaStream.CodecInfo info) {
         mContext = context;
         mPusher = pusher;
+        this.info = info;
     }
 
 
@@ -235,7 +237,7 @@ Video bitrate 384 Kbps 2 Mbps 4 Mbps 10 Mbps
         else if (mWidth >= 1280 || mHeight >= 1280) bitrate *= 0.4;
         else if (mWidth >= 720 || mHeight >= 720) bitrate *= 0.6;
         mMediaCodec = MediaCodec.createByCodecName(info.mName);
-        MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mWidth, mHeight);
+        MediaFormat mediaFormat = MediaFormat.createVideoFormat(info.mime, mWidth, mHeight);
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, framerate);
         mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, info.mColorFormat);

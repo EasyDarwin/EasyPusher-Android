@@ -13,6 +13,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.TextureView;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,6 +27,8 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CAMERA_PERMISSION = 1000;
     private static final int REQUEST_MEDIA_PROJECTION = 1001;
+//    public static final String HOST = "cloud.easydarwin.org";
+public static final String HOST = "192.168.3.108";
     private MediaStream mediaStream;
 
     private Single<MediaStream> getMediaStream() {
@@ -46,6 +50,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        CheckBox hevc_enable = findViewById(R.id.enable_265);
+        hevc_enable.setChecked(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("try_265_encode", false));
+        hevc_enable.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                PreferenceManager.getDefaultSharedPreferences(MainActivity.this).edit().putBoolean("try_265_encode", isChecked).apply();
+            }
+        });
 
         // 启动服务...
         Intent intent = new Intent(this, MediaStream.class);
@@ -90,6 +103,14 @@ public class MainActivity extends AppCompatActivity {
                         pushingStateText.append(":\t" + pushingState.msg);
                         if (pushingState.state > 0) {
                             pushingStateText.append(pushingState.url);
+                            pushingStateText.append("\n");
+                            if ("avc".equals(pushingState.videoCodec)) {
+                                pushingStateText.append("视频编码方式：" + "H264硬编码");
+                            }else if ("hevc".equals(pushingState.videoCodec)) {
+                                pushingStateText.append("视频编码方式："  + "H265硬编码");
+                            }else if ("x264".equals(pushingState.videoCodec)) {
+                                pushingStateText.append("视频编码方式："  + "x264");
+                            }
                         }
 
                     }
@@ -141,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
                         id = "c_" + (int) v;
                         PreferenceManager.getDefaultSharedPreferences(MainActivity.this).edit().putString("caemra-id", id).apply();
                     }
-                    mediaStream.startStream("cloud.easydarwin.org", "554", id);
+                    mediaStream.startStream(HOST, "554", id);
                 }
             }
         });
@@ -196,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
             getMediaStream().subscribe(new Consumer<MediaStream>() {
                 @Override
                 public void accept(MediaStream mediaStream) {
-                    mediaStream.pushScreen(resultCode, data, "cloud.easydarwin.org", "554", "screen111");
+                    mediaStream.pushScreen(resultCode, data, HOST, "554", "screen111");
                 }
             });
         }

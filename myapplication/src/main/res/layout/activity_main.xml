@@ -16,6 +16,18 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <CheckBox
+        android:id="@+id/enable_265"
+        android:layout_width="wrap_content"
+
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginTop="8dp"
+        android:text="265格式编码"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/texture_view" />
+
     <TableLayout
         android:layout_width="match_parent"
         android:layout_gravity="bottom"
@@ -69,28 +81,24 @@
         </TableRow>
 
         <TableRow>
+        <Button
+            android:id="@+id/press_record"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="按住录像"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-
-
-            <Button
-                android:id="@+id/press_record"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="按住录像"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/modify_camera_param" />
-
-            <TextView
-                android:id="@+id/record_time"
-                style="@style/Base.TextAppearance.AppCompat.Large"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="00:00"
-                android:textColor="#ff0000"
-                android:visibility="gone"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/texture_view" />
+        <TextView
+            android:id="@+id/record_time"
+            style="@style/Base.TextAppearance.AppCompat.Large"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textColor="#ff0000"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/texture_view" />
         </TableRow>
     </TableLayout>
 

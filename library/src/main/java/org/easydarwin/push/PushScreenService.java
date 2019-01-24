@@ -22,12 +22,15 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Surface;
 import android.view.WindowManager;
 
+import org.easydarwin.easypusher.BuildConfig;
 import org.easydarwin.easypusher.R;
+import org.easydarwin.muxer.EasyMuxer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -54,6 +57,7 @@ public class PushScreenService extends Service {
 
 
 
+    MediaStream.CodecInfo info = new MediaStream.CodecInfo();
     private MediaCodec.BufferInfo mBufferInfo = new MediaCodec.BufferInfo();
 
     private Thread mPushThread;
@@ -98,8 +102,11 @@ public class PushScreenService extends Service {
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
     private void configureMedia() throws IOException {
-
-        MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", windowWidth, windowHeight);
+        MediaStream.initEncoder(this, info);
+        if (TextUtils.isEmpty(info.mName) && info.mColorFormat == 0){
+            throw new IOException("media codec init error");
+        }
+        MediaFormat mediaFormat = MediaFormat.createVideoFormat(info.mime, windowWidth, windowHeight);
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, 1200000);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, 25);
         mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
@@ -107,7 +114,7 @@ public class PushScreenService extends Service {
         mediaFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
         mediaFormat.setInteger(MediaFormat.KEY_CAPTURE_RATE, 25);
         mediaFormat.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000000);
-        mMediaCodec = MediaCodec.createEncoderByType("video/avc");
+        mMediaCodec = MediaCodec.createByCodecName(info.mName);
         mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         mSurface = mMediaCodec.createInputSurface();
         mMediaCodec.start();
@@ -192,9 +199,11 @@ public class PushScreenService extends Service {
                 };
 //        startStream(ip, port, id, _callback);
                 mEasyPusher.initPush( getApplicationContext(), _callback);
-                mEasyPusher.setMediaInfo(Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
+                MediaStream.PushingState.sCodec = (info.hevcEncode ? "hevc":"avc");
+                mEasyPusher.setMediaInfo(info.hevcEncode ? Pusher.Codec.EASY_SDK_VIDEO_CODEC_H265:Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
                 mEasyPusher.start(ip, port, String.format("%s.sdp", id), Pusher.TransType.EASY_RTP_OVER_TCP);
                 try {
+                    byte[] h264 = new byte[102400];
                     while (mPushThread != null) {
                         int index = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 10000);
                         Log.d(TAG, "dequeue output buffer index=" + index);
@@ -206,33 +215,41 @@ public class PushScreenService extends Service {
                             } catch (InterruptedException e) {
                             }
                         } else if (index >= 0) {//有效输出
-
                             ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(index);
+                            outputBuffer.position(mBufferInfo.offset);
+                            outputBuffer.limit(mBufferInfo.offset + mBufferInfo.size);
 
 
-                            byte[] outData = new byte[mBufferInfo.size];
-                            outputBuffer.get(outData);
-
-//                        String data0 = String.format("%x %x %x %x %x %x %x %x %x %x ", outData[0], outData[1], outData[2], outData[3], outData[4], outData[5], outData[6], outData[7], outData[8], outData[9]);
-//                        Log.e("out_data", data0);
-
-                            //记录pps和sps
-                            int type = outData[4] & 0x07;
-                            if (type == 7 || type == 8) {
-                                Log.i(TAG, "Video metadata!");
-                                mPpsSps = outData;
-                            } else if (type == 5) {
-                                Log.i(TAG, "Video key frame!");
-                                //在关键帧前面加上pps和sps数据
-                                if (mPpsSps != null) {
-                                    byte[] iframeData = new byte[mPpsSps.length + outData.length];
-                                    System.arraycopy(mPpsSps, 0, iframeData, 0, mPpsSps.length);
-                                    System.arraycopy(outData, 0, iframeData, mPpsSps.length, outData.length);
-                                    outData = iframeData;
+                            boolean sync = false;
+                            if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {// sps
+                                sync = (mBufferInfo.flags & MediaCodec.BUFFER_FLAG_SYNC_FRAME) != 0;
+                                if (!sync) {
+                                    byte[] temp = new byte[mBufferInfo.size];
+                                    outputBuffer.get(temp);
+                                    mPpsSps = temp;
+                                    mMediaCodec.releaseOutputBuffer(index, false);
+                                    continue;
+                                } else {
+                                    mPpsSps = new byte[0];
                                 }
                             }
-
-                            mEasyPusher.push(outData, mBufferInfo.presentationTimeUs / 1000, 1);
+                            sync |= (mBufferInfo.flags & MediaCodec.BUFFER_FLAG_SYNC_FRAME) != 0;
+                            int len = mPpsSps.length + mBufferInfo.size;
+                            if (len > h264.length) {
+                                h264 = new byte[len];
+                            }
+                            if (sync) {
+                                System.arraycopy(mPpsSps, 0, h264, 0, mPpsSps.length);
+                                outputBuffer.get(h264, mPpsSps.length, mBufferInfo.size);
+                                mEasyPusher.push(h264, 0, mPpsSps.length + mBufferInfo.size, mBufferInfo.presentationTimeUs / 1000, 1);
+                                if (BuildConfig.DEBUG)
+                                    Log.i(TAG, String.format("push i video stamp:%d", mBufferInfo.presentationTimeUs / 1000));
+                            } else {
+                                outputBuffer.get(h264, 0, mBufferInfo.size);
+                                mEasyPusher.push(h264, 0, mBufferInfo.size, mBufferInfo.presentationTimeUs / 1000, 1);
+                                if (BuildConfig.DEBUG)
+                                    Log.i(TAG, String.format("push video stamp:%d", mBufferInfo.presentationTimeUs / 1000));
+                            }
 
 
                             mMediaCodec.releaseOutputBuffer(index, false);

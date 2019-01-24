@@ -21,6 +21,7 @@ import android.hardware.Camera;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
+import android.media.MediaFormat;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Environment;
@@ -180,15 +181,18 @@ public class MediaStream extends Service implements LifecycleObserver {
 
 
     public static class CodecInfo {
-        public String mName;
-        public int mColorFormat;
+        public String mName = "";
+        public int mColorFormat = 0;
+        boolean hevcEncode = false;
+        public String mime = "";
     }
-    public static CodecInfo info = new CodecInfo();
+    public CodecInfo info = new CodecInfo();
 
 
     public void startStream(String ip, String port, String id, InitCallback callback) {
         mEasyPusher.initPush( mApplicationContext, callback);
-        mEasyPusher.setMediaInfo(Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
+        PushingState.sCodec = mSWCodec ? "x264":(info.hevcEncode ? "hevc":"avc");
+        mEasyPusher.setMediaInfo(!mSWCodec && info.hevcEncode ? Pusher.Codec.EASY_SDK_VIDEO_CODEC_H265:Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
         mEasyPusher.start(ip, port, String.format("%s.sdp", id), Pusher.TransType.EASY_RTP_OVER_TCP);
     }
 
@@ -248,6 +252,8 @@ public class MediaStream extends Service implements LifecycleObserver {
         public final String msg;
         public final String url;
         public final boolean screenPushing;
+        static String sCodec ="avc";
+        public String videoCodec = sCodec;
 
         public PushingState(int state, String msg) {
             this.state = state;
@@ -428,7 +434,15 @@ public class MediaStream extends Service implements LifecycleObserver {
 
     @MainThread
     public void startStream(final String ip, final String port, final String id) {
-
+        if (Thread.currentThread() != mCameraThread) {
+            mCameraHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    startStream(ip,port, id);
+                }
+            });
+            return;
+        }
         stopStream();
         stopPushScreen();
         cameraPushing = true;
@@ -574,6 +588,28 @@ public class MediaStream extends Service implements LifecycleObserver {
     }
 
 
+    public static void initEncoder(Context context, CodecInfo info){
+        info.hevcEncode = false;
+        boolean try265Encode = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("try_265_encode", false);
+        ArrayList<CodecInfo> infos = listEncoders(try265Encode ?MediaFormat.MIMETYPE_VIDEO_HEVC:MediaFormat.MIMETYPE_VIDEO_AVC);
+        if (infos.isEmpty()) {
+            if (try265Encode){
+                infos = listEncoders(MediaFormat.MIMETYPE_VIDEO_AVC);
+            }
+        }else{
+            if (try265Encode) info.hevcEncode = true;
+        }
+        if (!infos.isEmpty()) {
+            CodecInfo ci = infos.get(0);
+            info.mName = ci.mName;
+            info.mColorFormat = ci.mColorFormat;
+            info.mime = ci.mime;
+        }else{
+            info.mName = "";
+            info.mColorFormat = 0;
+        }
+    }
+
     protected void createCamera() {
 
         mSWCodec = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key-sw-codec", false);
@@ -590,14 +626,14 @@ public class MediaStream extends Service implements LifecycleObserver {
         if (!enanleVideo) {
             return;
         }
-        ArrayList<CodecInfo> infos = listEncoders("video/avc");
-        if (infos.isEmpty()) mSWCodec = true;
-        if (mSWCodec) {
-        } else {
-            CodecInfo ci = infos.get(0);
-            info.mName = ci.mName;
-            info.mColorFormat = ci.mColorFormat;
+
+        if (!mSWCodec) {
+            initEncoder(mApplicationContext, info);
+            if (TextUtils.isEmpty(info.mName) && info.mColorFormat == 0) {
+                mSWCodec = true;
+            }
         }
+
         if (mCameraId == 2) {
             UVCCamera value = UVCCameraService.liveData.getValue();
             if (value != null) {
@@ -615,21 +651,10 @@ public class MediaStream extends Service implements LifecycleObserver {
         }
 
         if (mCamera != null) return;
-        if (Thread.currentThread() != mCameraThread) {
-            mCameraHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT);
-                    createCamera();
-                }
-            });
-            return;
-        }
         if (!enanleVideo) {
             return;
         }
         try {
-            mSWCodec = PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key-sw-codec", false);
             mCamera = Camera.open(mCameraId);
             mCamera.setErrorCallback(new Camera.ErrorCallback() {
                 @Override
@@ -860,7 +885,7 @@ public class MediaStream extends Service implements LifecycleObserver {
             if (mSWCodec) {
                 mVC = new SWConsumer(mApplicationContext, mEasyPusher);
             } else {
-                mVC = new HWConsumer(mApplicationContext, mEasyPusher);
+                mVC = new HWConsumer(mApplicationContext, mEasyPusher, info);
             }
             if (!rotate) {
                 mVC.onVideoStart(width, height);
@@ -1117,6 +1142,15 @@ public class MediaStream extends Service implements LifecycleObserver {
     }
 
     public void stopStream() {
+        if (Thread.currentThread() != mCameraThread) {
+            mCameraHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    stopStream();
+                }
+            });
+            return;
+        }
         mEasyPusher.stop();
         pushingStateLiveData.postValue(new PushingState(0, "未开始"));
 //        pushingScreenLiveData.postValue(new PushingState("", 0, "未开始", true));
@@ -1226,6 +1260,7 @@ public class MediaStream extends Service implements LifecycleObserver {
                     CodecInfo ci = new CodecInfo();
                     ci.mName = name;
                     ci.mColorFormat = colorFormat;
+                    ci.mime = mime;
                     codecInfos.add(ci);
                 }
             }
