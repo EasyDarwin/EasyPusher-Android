@@ -27,8 +27,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CAMERA_PERMISSION = 1000;
     private static final int REQUEST_MEDIA_PROJECTION = 1001;
-//    public static final String HOST = "cloud.easydarwin.org";
-public static final String HOST = "192.168.3.108";
+    public static final String HOST = "cloud.easydarwin.org";
     private MediaStream mediaStream;
 
     private Single<MediaStream> getMediaStream() {
@@ -227,7 +226,7 @@ public static final String HOST = "192.168.3.108";
         getMediaStream().subscribe(new Consumer<MediaStream>() {
             @Override
             public void accept(MediaStream mediaStream) throws Exception {
-        mediaStream.switchCamera();
+                mediaStream.switchCamera();
             }
         });
     }
