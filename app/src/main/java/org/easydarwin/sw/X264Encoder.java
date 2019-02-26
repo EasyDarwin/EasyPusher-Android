@@ -14,14 +14,22 @@ public class X264Encoder {
 
     /**
      * 创建编码器
+     *  preset { "ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo", 0 };
+     *  tune { "film", "animation", "grain", "stillimage", "psnr", "ssim", "fastdecode", "zerolatency", 0 };
+     *  profile { "baseline", "main", "high", "high10", "high422", "high444", 0 }
      *
-     * @param w       要编码的视频的宽度
-     * @param h       要编码的视频的高度
-     * @param bitrate 要编码的码率
+     *  https://www.jianshu.com/p/b46a33dd958d?utm_campaign=maleskine&utm_content=note&utm_medium=seo_notes&utm_source=recommendation
      */
-    public void create(int w, int h, int frameRate, int bitrate) {
-        long[] handle = new long[1];
-        create(w, h, frameRate, bitrate, handle);
+    public void create(int w, int h, int fps, int kbps) {
+//        1000
+//        161-》14
+//        171-》1000。。。1500
+//        101-》10
+//        170->1029
+
+//        371->
+        long[] handle = new long[1];    //
+        create(w, h, 3, 7, 0, fps, kbps, handle);
         mHandle = handle[0];
     }
 
@@ -47,7 +55,7 @@ public class X264Encoder {
         close(mHandle);
     }
 
-    private static native void create(int width, int height, int frameRate, int bitRate, long[] handle);
+    private static native void create(int width, int height, int preset_idx, int tune_idx, int profile_idx, int fps, int kbps, long[] handle);
 
     private static native int encode(long handle, byte[] buffer, int offset, byte[] out, int outOffset, int[] outLen, byte[] keyFrame);
 

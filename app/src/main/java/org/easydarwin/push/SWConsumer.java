@@ -3,6 +3,7 @@ package org.easydarwin.push;
 import android.content.Context;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
+import android.os.SystemClock;
 import android.util.Log;
 
 import org.easydarwin.muxer.EasyMuxer;
@@ -36,8 +37,10 @@ public class SWConsumer extends Thread implements VideoConsumer {
         this.mHeight = height;
 
         x264 = new X264Encoder();
-        int bitrate = (int) (mWidth*mHeight*20*2*0.07f);
-        x264.create(width, height, 20, bitrate/500);
+        int bitrate = (int) 300000;
+//        260->37
+//        460->37
+        x264.create(width, height, 20, 1000);
         mVideoStarted = true;
         start();
     }
@@ -63,6 +66,7 @@ public class SWConsumer extends Thread implements VideoConsumer {
         byte[] keyFrm = new byte[1];
         int []outLen = new int[1];
         MediaCodec.BufferInfo bi = new MediaCodec.BufferInfo();
+        long lastLog = SystemClock.elapsedRealtime();
         do {
             try {
                 int r = 0;
@@ -75,6 +79,12 @@ public class SWConsumer extends Thread implements VideoConsumer {
                     Log.i(TAG, String.format("encode spend:%d ms. keyFrm:%d", System.currentTimeMillis() - begin, keyFrm[0]));
 //                                newBuf = new byte[outLen[0]];
 //                                System.arraycopy(h264, 0, newBuf, 0, newBuf.length);
+
+                    int bitrate = BitrateStat.stat("Bitrate"+getName(), outLen[0]);
+                    if (SystemClock.elapsedRealtime() - lastLog >= 1000){
+                        lastLog = SystemClock.elapsedRealtime();
+                        Log.i(TAG,String.format("bitrate:%.02fkbps", bitrate*8.0f/1000));
+                    }
                 }
                 if (keyFrm[0] == 1){
                     synchronized (SWConsumer.this) {

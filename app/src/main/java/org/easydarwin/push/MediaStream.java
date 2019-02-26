@@ -238,8 +238,8 @@ public class MediaStream {
             parameters.setPreviewFrameRate(20);
             List<String> supportedFocusModes = parameters.getSupportedFocusModes();
             if (supportedFocusModes == null) supportedFocusModes = new ArrayList<>();
-            if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
-                parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+            if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
+                parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
             }
 //            int maxExposureCompensation = parameters.getMaxExposureCompensation();
 //            parameters.setExposureCompensation(3);
@@ -402,14 +402,6 @@ public class MediaStream {
 
 
             mCamera.startPreview();
-            Log.i(TAG, "startPreview");
-            try {
-                mCamera.autoFocus(null);
-            } catch (Exception e) {
-                //忽略异常
-                Log.i(TAG, "auto foucus fail");
-            }
-
             boolean frameRotate = false;
 
             int cameraRotationOffset = camInfo.orientation;
