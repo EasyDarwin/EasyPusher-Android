@@ -40,7 +40,21 @@ public class SWConsumer extends Thread implements VideoConsumer {
         int bitrate = (int) 300000;
 //        260->37
 //        460->37
-        x264.create(width, height, 20, 1000);
+
+//        int bitrate = 2000000;
+//        bitrate = (int) (mWidth * mHeight * 30 * 2 * 0.1);
+        if (width >= 1920 || height >= 1920){
+            bitrate = 4000;
+        }else if (width >= 1280 || height >= 1280){
+            bitrate = 2000;
+        }else if (width >= 960 || height >= 960){
+            bitrate = 1000;
+        }else if (width >= 640 || height >= 640){
+            bitrate = 500;
+        }else if (width >= 480 || height >= 480){
+            bitrate = 300;
+        }
+        x264.create(width, height, 20, bitrate);
         mVideoStarted = true;
         start();
     }
@@ -74,62 +88,65 @@ public class SWConsumer extends Thread implements VideoConsumer {
                 byte[] data = tb.buffer;
                 long begin = System.currentTimeMillis();
                 keyFrm[0] = 0;
-                r = x264.encode(data, 0, h264, 0, outLen, keyFrm);
-                if (r > 0) {
-                    Log.i(TAG, String.format("encode spend:%d ms. keyFrm:%d", System.currentTimeMillis() - begin, keyFrm[0]));
+                Pusher p = mPusher;
+                if ((p != null && p.pushing()) || muxer != null) {
+                    r = x264.encode(data, 0, h264, 0, outLen, keyFrm);
+                    if (r > 0) {
+                        Log.i(TAG, String.format("encode spend:%d ms. keyFrm:%d", System.currentTimeMillis() - begin, keyFrm[0]));
 //                                newBuf = new byte[outLen[0]];
 //                                System.arraycopy(h264, 0, newBuf, 0, newBuf.length);
 
-                    int bitrate = BitrateStat.stat("Bitrate"+getName(), outLen[0]);
-                    if (SystemClock.elapsedRealtime() - lastLog >= 1000){
-                        lastLog = SystemClock.elapsedRealtime();
-                        Log.i(TAG,String.format("bitrate:%.02fkbps", bitrate*8.0f/1000));
-                    }
-                }
-                if (keyFrm[0] == 1){
-                    synchronized (SWConsumer.this) {
-                        if (newFormat == null) {
-                            // init format
-
-                            MediaFormat fmt = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, mWidth, mHeight);
-                            byte[] dataOut = new byte[128];
-                            int[] dataOutLen = new int[]{128};
-                            int result = getXPS(h264, 0, 256, dataOut, dataOutLen, 7);
-                            if (result >= 0) {
-                                ByteBuffer csd0 = ByteBuffer.allocate(dataOutLen[0]);
-                                csd0.put(dataOut, 0, dataOutLen[0]);
-                                csd0.clear();
-                                Log.i(TAG, String.format("CSD-0 searched"));
-                                fmt.setByteBuffer("csd-0", csd0);
-                            }
-                            dataOutLen[0] = 128;
-                            result = getXPS(h264, 0, 256, dataOut, dataOutLen, 8);
-                            if (result >= 0) {
-                                ByteBuffer csd1 = ByteBuffer.allocate(dataOutLen[0]);
-                                csd1.put(dataOut, 0, dataOutLen[0]);
-                                csd1.clear();
-                                Log.i(TAG, String.format("CSD-1 searched"));
-                                fmt.setByteBuffer("csd-1", csd1);
-                            }
-                            newFormat = fmt;
-                            if (muxer != null) muxer.addTrack(newFormat, true);
+                        int bitrate = BitrateStat.stat("Bitrate" + getName(), outLen[0]);
+                        if (SystemClock.elapsedRealtime() - lastLog >= 1000) {
+                            lastLog = SystemClock.elapsedRealtime();
+                            Log.i(TAG, String.format("bitrate:%.02fkbps", bitrate * 8.0f / 1000));
                         }
                     }
-                }
-                yuv_caches.offer(data);
-                synchronized (SWConsumer.this){
-                    if (muxer != null) {
-                        bi.flags = 0;
-                        bi.presentationTimeUs = tb.time*1000;
-                        bi.flags |= keyFrm[0] == 1 ? MediaCodec.BUFFER_FLAG_KEY_FRAME : 0;
-                        bi.offset = 0;
-                        bi.size = outLen[0];
-                        ByteBuffer bf = ByteBuffer.wrap(h264, 0, outLen[0]);
-                        muxer.pumpStream(bf, bi, true);
+                    if (keyFrm[0] == 1) {
+                        synchronized (SWConsumer.this) {
+                            if (newFormat == null) {
+                                // init format
+
+                                MediaFormat fmt = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, mWidth, mHeight);
+                                byte[] dataOut = new byte[128];
+                                int[] dataOutLen = new int[]{128};
+                                int result = getXPS(h264, 0, 256, dataOut, dataOutLen, 7);
+                                if (result >= 0) {
+                                    ByteBuffer csd0 = ByteBuffer.allocate(dataOutLen[0]);
+                                    csd0.put(dataOut, 0, dataOutLen[0]);
+                                    csd0.clear();
+                                    Log.i(TAG, String.format("CSD-0 searched"));
+                                    fmt.setByteBuffer("csd-0", csd0);
+                                }
+                                dataOutLen[0] = 128;
+                                result = getXPS(h264, 0, 256, dataOut, dataOutLen, 8);
+                                if (result >= 0) {
+                                    ByteBuffer csd1 = ByteBuffer.allocate(dataOutLen[0]);
+                                    csd1.put(dataOut, 0, dataOutLen[0]);
+                                    csd1.clear();
+                                    Log.i(TAG, String.format("CSD-1 searched"));
+                                    fmt.setByteBuffer("csd-1", csd1);
+                                }
+                                newFormat = fmt;
+                                if (muxer != null) muxer.addTrack(newFormat, true);
+                            }
+                        }
                     }
-                }
-                if (mPusher != null) {
-                    mPusher.push(h264, 0, outLen[0], tb.time, 1);
+                    yuv_caches.offer(data);
+                    synchronized (SWConsumer.this) {
+                        if (muxer != null) {
+                            bi.flags = 0;
+                            bi.presentationTimeUs = tb.time * 1000;
+                            bi.flags |= keyFrm[0] == 1 ? MediaCodec.BUFFER_FLAG_KEY_FRAME : 0;
+                            bi.offset = 0;
+                            bi.size = outLen[0];
+                            ByteBuffer bf = ByteBuffer.wrap(h264, 0, outLen[0]);
+                            muxer.pumpStream(bf, bi);
+                        }
+                    }
+                    if (p != null) {
+                        p.push(h264, 0, outLen[0], tb.time, 1);
+                    }
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();

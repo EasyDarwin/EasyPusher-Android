@@ -130,11 +130,21 @@ public class AudioStream {
                     while (mThread != null) {
                         bufferIndex = mMediaCodec.dequeueInputBuffer(1000);
                         if (bufferIndex >= 0) {
-                            inputBuffers[bufferIndex].clear();
-                            len = mAudioRecord.read(inputBuffers[bufferIndex], BUFFER_SIZE);
+                            ByteBuffer audioBuffer = inputBuffers[bufferIndex];
+                            audioBuffer.clear();
                             long timeUs = System.nanoTime() / 1000;
+                            len = mAudioRecord.read(audioBuffer, BUFFER_SIZE);
                             Log.i(TAG, String.format("audio: %d [%d] ", timeUs, timeUs - presentationTimeUs));
                             presentationTimeUs = timeUs;
+
+                            EasyMuxer m = muxer;
+                            if (m != null && len >0) {
+                                byte []bytes = new byte[len];
+                                audioBuffer.clear();
+                                audioBuffer.get(bytes);
+                                audioBuffer.clear();
+                                m.pumpPCMStream(bytes, timeUs/1000);
+                            }
                             if (len == AudioRecord.ERROR_INVALID_OPERATION || len == AudioRecord.ERROR_BAD_VALUE) {
                                 mMediaCodec.queueInputBuffer(bufferIndex, 0, 0, presentationTimeUs, 0);
                             } else {
@@ -178,8 +188,10 @@ public class AudioStream {
 
     public synchronized void setMuxer(EasyMuxer muxer) {
         if (muxer != null) {
-            if (newFormat != null)
-                muxer.addTrack(newFormat, false);
+            MediaFormat format = new MediaFormat();
+            format.setInteger(MediaFormat.KEY_SAMPLE_RATE, samplingRate);
+            format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
+            muxer.addTrack(format, false);
         }
         this.muxer = muxer;
     }
@@ -218,8 +230,6 @@ public class AudioStream {
                         outputBuffer = mBuffers[index];
                     }
 
-                    if (muxer != null)
-                        muxer.pumpStream(outputBuffer, mBufferInfo, false);
                     outputBuffer.get(mBuffer.array(), 7, mBufferInfo.size);
                     outputBuffer.clear();
                     mBuffer.position(7 + mBufferInfo.size);
@@ -242,8 +252,6 @@ public class AudioStream {
                     synchronized (AudioStream.this) {
                         Log.v(TAG, "output format changed...");
                         newFormat = mMediaCodec.getOutputFormat();
-                        if (muxer != null)
-                            muxer.addTrack(newFormat, false);
                     }
                 } else if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
 //                    Log.v(TAG, "No buffer available...");

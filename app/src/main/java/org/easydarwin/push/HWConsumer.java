@@ -145,7 +145,7 @@ public class HWConsumer extends Thread implements VideoConsumer {
                 outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
                 EasyMuxer muxer = mMuxer;
                 if (muxer != null) {
-                    muxer.pumpStream(outputBuffer, bufferInfo, true);
+                    muxer.pumpStream(outputBuffer, bufferInfo);
                 }
 
                 if (mPusher != null) {

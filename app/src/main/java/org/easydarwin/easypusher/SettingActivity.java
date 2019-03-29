@@ -198,6 +198,8 @@ public class SettingActivity extends AppCompatActivity {
             }
         });
 
+        TextView version = findViewById(R.id.txt_version);
+        version.setText(BuildConfig.VERSION_NAME);
     }
 
     private void showToast(String message) {

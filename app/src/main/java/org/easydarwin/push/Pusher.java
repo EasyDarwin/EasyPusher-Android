@@ -37,4 +37,6 @@ public interface Pusher {
     public  void push(byte[] data, int offset, int length, long timestamp, int type);
 
     public  void push(byte[] data, long timestamp, int type);
+
+    public abstract boolean pushing();
 }
