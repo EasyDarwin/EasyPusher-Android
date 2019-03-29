@@ -85,6 +85,8 @@ public class EasyMuxer {
         byte []extra = new byte[sps_size + pps_size];
         sps.get(extra, 0, sps_size);
         pps.get(extra, sps_size, pps_size);
+        sps.clear();
+        pps.clear();
         int r = mMuxer.create(mp4Path, 0, mVideoFormat.getInteger(MediaFormat.KEY_WIDTH), mVideoFormat.getInteger(MediaFormat.KEY_HEIGHT), extra,
                 mAudioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE), mAudioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT));
         if (r != 0) throw new IllegalStateException("muxer create error:" + r);
@@ -104,6 +106,8 @@ public class EasyMuxer {
             outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
             byte[] buffer = new byte[bufferInfo.size];
             outputBuffer.get(buffer);
+            outputBuffer.position(bufferInfo.offset);
+            outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
             int r = mMuxer.writeFrame(EasyMuxer2.AVMEDIA_TYPE_VIDEO,buffer,0, bufferInfo.size, bufferInfo.presentationTimeUs/1000);
             if (r != 0){
                 Log.w(TAG,"WriteFrame return error:"+r);
