@@ -30,6 +30,7 @@ public class EasyPusher implements Pusher{
     private long mTotal;
     private int mTotalFrms;
 
+    private boolean pushing = false;
     public interface OnInitPusherCallback {
         public void onCallback(int code);
 
@@ -90,6 +91,7 @@ public class EasyPusher implements Pusher{
     private native void stopPush(long pusherObj);
 
     public synchronized void stop() {
+        pushing = false;
         Log.i(TAG, "PusherStop");
         if (mPusherObj == 0) return;
         stopPush(mPusherObj);
@@ -130,6 +132,8 @@ public class EasyPusher implements Pusher{
     public synchronized void start(String serverIP, String serverPort, String streamName, int transType){
         if (mPusherObj == 0) return;
         start(mPusherObj, serverIP, serverPort, streamName, transType);
+        pushing = true;
+
     }
 
     public synchronized void push(byte[] data, int offset, int length, long timestamp, int type) {
@@ -154,6 +158,11 @@ public class EasyPusher implements Pusher{
 
     public synchronized void push(byte[] data, long timestamp, int type) {
         push( data, 0, data.length, timestamp, type);
+    }
+
+    @Override
+    public boolean pushing() {
+        return pushing;
     }
 }
 

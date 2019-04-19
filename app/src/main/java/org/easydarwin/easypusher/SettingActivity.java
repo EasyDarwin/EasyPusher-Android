@@ -24,6 +24,8 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -96,7 +98,51 @@ public class SettingActivity extends AppCompatActivity {
         });
 
 
-        CheckBox backgroundPushing = (CheckBox) findViewById(R.id.enable_background_camera_pushing);
+        RadioGroup push_content = findViewById(R.id.push_content);
+        boolean videoEnable = PreferenceManager.getDefaultSharedPreferences(SettingActivity.this)
+                .getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true);
+        if (videoEnable){
+            boolean audioEnable = PreferenceManager.getDefaultSharedPreferences(SettingActivity.this)
+                    .getBoolean(EasyApplication.KEY_ENABLE_AUDIO, true);
+
+            if (audioEnable){
+                RadioButton push_av = findViewById(R.id.push_av);
+                push_av.setChecked(true);
+            }else{
+                RadioButton push_v = findViewById(R.id.push_v);
+                push_v.setChecked(true);
+            }
+        }else{
+            RadioButton push_a = findViewById(R.id.push_a);
+            push_a.setChecked(true);
+        }
+        push_content.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                if (checkedId == R.id.push_av){
+                    PreferenceManager.getDefaultSharedPreferences(SettingActivity.this)
+                            .edit()
+                            .putBoolean(EasyApplication.KEY_ENABLE_VIDEO, true)
+                            .putBoolean(EasyApplication.KEY_ENABLE_AUDIO, true)
+                            .apply();
+                }else if (checkedId == R.id.push_a){
+                    PreferenceManager.getDefaultSharedPreferences(SettingActivity.this)
+                            .edit()
+                            .putBoolean(EasyApplication.KEY_ENABLE_VIDEO, false)
+                            .putBoolean(EasyApplication.KEY_ENABLE_AUDIO, true)
+                            .apply();
+
+                }else if (checkedId == R.id.push_v){
+                    PreferenceManager.getDefaultSharedPreferences(SettingActivity.this)
+                            .edit()
+                            .putBoolean(EasyApplication.KEY_ENABLE_VIDEO, true)
+                            .putBoolean(EasyApplication.KEY_ENABLE_AUDIO, false)
+                            .apply();
+                }
+            }
+        });
+
+        CheckBox backgroundPushing = findViewById(R.id.enable_background_camera_pushing);
         backgroundPushing.setChecked(PreferenceManager.getDefaultSharedPreferences(this).getBoolean(KEY_ENABLE_BACKGROUND_CAMERA, false));
 
         backgroundPushing.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -152,15 +198,8 @@ public class SettingActivity extends AppCompatActivity {
             }
         });
 
-        CheckBox only_push_audio = (CheckBox) findViewById(R.id.only_push_audio);
-        only_push_audio.setChecked(!PreferenceManager.getDefaultSharedPreferences(this).getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true));
-
-        only_push_audio.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit().putBoolean(EasyApplication.KEY_ENABLE_VIDEO, !isChecked).apply();
-            }
-        });
+        TextView version = findViewById(R.id.txt_version);
+        version.setText(BuildConfig.VERSION_NAME);
     }
 
     private void showToast(String message) {

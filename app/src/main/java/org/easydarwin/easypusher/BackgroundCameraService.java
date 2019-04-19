@@ -83,10 +83,18 @@ public class BackgroundCameraService extends Service implements TextureView.Surf
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (Settings.canDrawOverlays(this)) {
-                WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(1, 1, WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,
-                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH, PixelFormat.TRANSLUCENT);
-                layoutParams.gravity = Gravity.LEFT | Gravity.TOP;
-                mWindowManager.addView(mOutComeVideoView, layoutParams);
+                WindowManager.LayoutParams param = new WindowManager.LayoutParams();
+                param.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    param.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+                }
+                param.format = PixelFormat.TRANSLUCENT;
+                param.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+                param.alpha = 1.0f;
+                param.gravity = Gravity.LEFT | Gravity.TOP;
+                param.width = 1;
+                param.height = 1;
+                mWindowManager.addView(mOutComeVideoView, param);
             }
         }else{
             WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(1, 1, WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,

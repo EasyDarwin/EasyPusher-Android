@@ -1,5 +1,6 @@
 package org.easydarwin.audio;
 
+import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaCodec;
@@ -7,11 +8,10 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Process;
-import android.support.annotation.Nullable;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
-import org.easydarwin.easypusher.BuildConfig;
-import org.easydarwin.easypusher.RecordService;
+import org.easydarwin.easypusher.EasyApplication;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.push.Pusher;
 
@@ -21,10 +21,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import javax.inject.Inject;
+
 
 public class AudioStream {
     private static AudioStream _this;
+    private final Context context;
     EasyMuxer muxer;
     private int samplingRate = 8000;
     private int bitRate = 16000;
@@ -62,7 +63,8 @@ public class AudioStream {
     private Thread mWriter;
     private MediaFormat newFormat;
 
-    public AudioStream() {
+    public AudioStream(Context context) {
+        this.context = context;
         int i = 0;
         for (; i < AUDIO_SAMPLING_RATES.length; i++) {
             if (AUDIO_SAMPLING_RATES[i] == samplingRate) {
@@ -128,11 +130,21 @@ public class AudioStream {
                     while (mThread != null) {
                         bufferIndex = mMediaCodec.dequeueInputBuffer(1000);
                         if (bufferIndex >= 0) {
-                            inputBuffers[bufferIndex].clear();
-                            len = mAudioRecord.read(inputBuffers[bufferIndex], BUFFER_SIZE);
+                            ByteBuffer audioBuffer = inputBuffers[bufferIndex];
+                            audioBuffer.clear();
                             long timeUs = System.nanoTime() / 1000;
+                            len = mAudioRecord.read(audioBuffer, BUFFER_SIZE);
                             Log.i(TAG, String.format("audio: %d [%d] ", timeUs, timeUs - presentationTimeUs));
                             presentationTimeUs = timeUs;
+
+                            EasyMuxer m = muxer;
+                            if (m != null && len >0) {
+                                byte []bytes = new byte[len];
+                                audioBuffer.clear();
+                                audioBuffer.get(bytes);
+                                audioBuffer.clear();
+                                m.pumpPCMStream(bytes, timeUs/1000);
+                            }
                             if (len == AudioRecord.ERROR_INVALID_OPERATION || len == AudioRecord.ERROR_BAD_VALUE) {
                                 mMediaCodec.queueInputBuffer(bufferIndex, 0, 0, presentationTimeUs, 0);
                             } else {
@@ -168,21 +180,25 @@ public class AudioStream {
                 }
             }
         }, "AACRecoder");
-        mThread.start();
-
+        if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("key-enable-audio",true)) {
+            mThread.start();
+        }
     }
 
 
     public synchronized void setMuxer(EasyMuxer muxer) {
         if (muxer != null) {
-            if (newFormat != null)
-                muxer.addTrack(newFormat, false);
+            MediaFormat format = new MediaFormat();
+            format.setInteger(MediaFormat.KEY_SAMPLE_RATE, samplingRate);
+            format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
+            muxer.addTrack(format, false);
         }
         this.muxer = muxer;
     }
 
     public static synchronized AudioStream getInstance() {
-        if (_this == null) _this = new AudioStream();
+        EasyApplication app = EasyApplication.getEasyApplication();
+        if (_this == null) _this = new AudioStream(app);
         return _this;
     }
 
@@ -214,8 +230,6 @@ public class AudioStream {
                         outputBuffer = mBuffers[index];
                     }
 
-                    if (muxer != null)
-                        muxer.pumpStream(outputBuffer, mBufferInfo, false);
                     outputBuffer.get(mBuffer.array(), 7, mBufferInfo.size);
                     outputBuffer.clear();
                     mBuffer.position(7 + mBufferInfo.size);
@@ -238,8 +252,6 @@ public class AudioStream {
                     synchronized (AudioStream.this) {
                         Log.v(TAG, "output format changed...");
                         newFormat = mMediaCodec.getOutputFormat();
-                        if (muxer != null)
-                            muxer.addTrack(newFormat, false);
                     }
                 } else if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
 //                    Log.v(TAG, "No buffer available...");
