@@ -1,4 +1,4 @@
-# EasyPusher-Android RTSP直播推流
+# EasyPusher Android直播推流
 
 A simple, robust, low latency RTSP video&audio&screen stream pusher and recorder on android. 精炼、稳定、高效的安卓前/后摄像头/手机桌面屏幕采集、编码、RTSP直播推送工具，充分秉承了RTP在即时通信领域中的技术特点，网络条件满足的情况下，延时控制在300ms~500ms，非常适合于安防、应急指挥、4G执法、远程遥控与特殊行业直播等应用领域；
 
@@ -57,10 +57,6 @@ EasyPusher是EasyDarwin流媒体团队开发的一个RTSP/RTP流媒体音/视频
 
 **EasyDarwin**开源流媒体服务器：[www.EasyDarwin.org](http://www.easydarwin.org)
 
-**EasyDSS**商用流媒体解决方案：[www.EasyDSS.com](http://www.easydss.com)
-
-**EasyNVR**无插件直播方案：[www.EasyNVR.com](http://www.easynvr.com)
-
-Copyright &copy; EasyDarwin Team 2012-2018
+Copyright &copy; EasyDarwin Team 2012-2019
 
 ![EasyDarwin](http://www.easydarwin.org/skin/easydarwin/images/wx_qrcode.jpg)
