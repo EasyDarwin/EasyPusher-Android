@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">EasyPusher</string>
     <string name="version">1.0</string>
-    <string name="stream_stat" formatted="false">编码帧率：%d,码率：%dKBps</string>
-    <string name="resolution">分辨率</string>
+    <string name="stream_stat" formatted="false">编码帧率：%d，码率：%dkbps</string>
+    <string name="camera">摄像头</string>
+    <string name="video_uploading_in_background">后台采集视频中</string>
+
+    <string name="info_desc">EasyPusher是 TSINGSEE青犀开放平台 开发的一个RTSP流媒体音/视频直播推送产品组件，全平台支持(包括Windows/Linux(32 &#038; 64)，ARM各平台，Android、iOS)，通过EasyRTMP我们就可以避免接触到稍显复杂的RTMP/FLV打包推送流程，只需要调用EasyRTMP的几个API接口，就能轻松、稳定地把流媒体音视频数据推送给RTMP流媒体服务器进行转发和分发，尤其是与EasyDSS流媒体服务器、EasyPlayer-RTMP播放器、EasyPlayerPro播放器可以无缝衔接，EasyRTMP从16年开始发展和迭代，经过长时间的企业用户和项目检验，稳定性非常高。</string>
 </resources>

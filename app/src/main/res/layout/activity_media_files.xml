@@ -9,24 +9,30 @@
         android:orientation="vertical">
 
         <android.support.v7.widget.Toolbar
-            android:id="@+id/toolbar"
+            android:id="@+id/main_toolbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="44dp"
+            android:background="@color/colorTheme">
+
+            <TextView
+                android:id="@+id/main_title_tv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:text="录像"
+                android:gravity="center"
+                android:singleLine="true"
+                android:layout_marginRight="50dp"
+                android:textSize="18sp"/>
+
+        </android.support.v7.widget.Toolbar>
 
         <android.support.v4.view.ViewPager
             android:id="@+id/view_pager"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-
-            <android.support.v4.view.PagerTitleStrip
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/colorPrimary"
-                android:textSize="18sp" />
         </android.support.v4.view.ViewPager>
 
-
     </LinearLayout>
-
 
 </layout>

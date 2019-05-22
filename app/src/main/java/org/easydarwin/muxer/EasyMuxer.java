@@ -2,8 +2,6 @@ package org.easydarwin.muxer;
 
 import android.media.MediaCodec;
 import android.media.MediaFormat;
-import android.media.MediaMuxer;
-import android.os.Build;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -13,8 +11,6 @@ import org.easydarwin.easypusher.BuildConfig;
 import org.easydarwin.easypusher.EasyApplication;
 import org.easydarwin.video.EasyMuxer2;
 
-import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**

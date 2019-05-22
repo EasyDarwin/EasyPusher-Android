@@ -9,16 +9,16 @@ package org.easydarwin.easypusher;
 
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.databinding.DataBindingUtil;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.text.TextUtils;
-import android.util.Log;
+import android.support.v7.widget.Toolbar;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -26,216 +26,252 @@ import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.easydarwin.config.Config;
+import org.easydarwin.easypusher.databinding.ActivitySettingBinding;
+import org.easydarwin.util.Config;
+import org.easydarwin.util.SPUtil;
 
-public class SettingActivity extends AppCompatActivity {
+/**
+ * 设置页
+ * */
+public class SettingActivity extends AppCompatActivity implements Toolbar.OnMenuItemClickListener {
 
-    private static final boolean TEST_ = true;
+    public static final int REQUEST_OVERLAY_PERMISSION = 1004;  // 悬浮框
+    private static final int REQUEST_SCAN_TEXT_URL = 1003;      // 扫描二维码
 
-    public static final int REQUEST_OVERLAY_PERMISSION = 1004;
-    public static final String KEY_ENABLE_BACKGROUND_CAMERA = "key_enable_background_camera";
+    EditText url;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_setting);
-        final EditText txtIp = (EditText) findViewById(R.id.edt_server_address);
-        final EditText txtPort = (EditText) findViewById(R.id.edt_server_port);
-        final EditText txtId = (EditText) findViewById(R.id.edt_stream_id);
-        final View rtspGroup = findViewById(R.id.rtsp_group);
-        final EditText rtmpUrl = (EditText) findViewById(R.id.rtmp_url);
-        if (BuildConfig.FLAVOR.equals("rtmp")) {
-            rtspGroup.setVisibility(View.GONE);
-            rtmpUrl.setVisibility(View.VISIBLE);
-        }else{
-            rtspGroup.setVisibility(View.VISIBLE);
-            rtmpUrl.setVisibility(View.GONE);
-        }
-        String ip = EasyApplication.getEasyApplication().getIp();
-        String port = EasyApplication.getEasyApplication().getPort();
-        String id = EasyApplication.getEasyApplication().getId();
+        ActivitySettingBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_setting);
 
-        txtIp.setText(ip);
-        txtPort.setText(port);
-        txtId.setText(id);
+        setSupportActionBar(binding.mainToolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        binding.mainToolbar.setOnMenuItemClickListener(this);
+        // 左边的小箭头（注意需要在setSupportActionBar(toolbar)之后才有效果）
+        binding.mainToolbar.setNavigationIcon(R.drawable.com_back);
 
-        rtmpUrl.setText(EasyApplication.getEasyApplication().getUrl());
+        url = (EditText) findViewById(R.id.push_url);
+        url.setText(Config.getServerURL(this));
+
         Button btnSave = (Button) findViewById(R.id.btn_save);
         btnSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String ipValue = txtIp.getText().toString().trim();
-                String portValue = txtPort.getText().toString().trim();
-                String idValue = txtId.getText().toString().trim();
-                String url = rtmpUrl.getText().toString().trim();
-
-                if (TextUtils.isEmpty(ipValue)) {
-                    ipValue = Config.DEFAULT_SERVER_IP;
-                }
-
-                if (TextUtils.isEmpty(portValue)) {
-                    portValue = Config.DEFAULT_SERVER_PORT;
-                }
-
-                if (TextUtils.isEmpty(idValue)) {
-                    idValue = Config.DEFAULT_STREAM_ID;
-                }
-
-                if (TextUtils.isEmpty(url)) {
-                    url = Config.DEFAULT_SERVER_URL;
-                }
-
-                EasyApplication.getEasyApplication().saveStringIntoPref(Config.SERVER_IP, ipValue);
-                EasyApplication.getEasyApplication().saveStringIntoPref(Config.SERVER_PORT, portValue);
-                EasyApplication.getEasyApplication().saveStringIntoPref(Config.STREAM_ID, idValue);
-                EasyApplication.getEasyApplication().saveStringIntoPref(Config.SERVER_URL, url);
+                String url = SettingActivity.this.url.getText().toString().trim();
+                Config.setServerURL(SettingActivity.this, url);
 
                 finish();
             }
         });
 
-
-        RadioGroup push_content = findViewById(R.id.push_content);
-        boolean videoEnable = PreferenceManager.getDefaultSharedPreferences(SettingActivity.this)
-                .getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true);
-        if (videoEnable){
-            boolean audioEnable = PreferenceManager.getDefaultSharedPreferences(SettingActivity.this)
-                    .getBoolean(EasyApplication.KEY_ENABLE_AUDIO, true);
-
-            if (audioEnable){
-                RadioButton push_av = findViewById(R.id.push_av);
-                push_av.setChecked(true);
-            }else{
-                RadioButton push_v = findViewById(R.id.push_v);
-                push_v.setChecked(true);
-            }
-        }else{
-            RadioButton push_a = findViewById(R.id.push_a);
-            push_a.setChecked(true);
-        }
-        push_content.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                if (checkedId == R.id.push_av){
-                    PreferenceManager.getDefaultSharedPreferences(SettingActivity.this)
-                            .edit()
-                            .putBoolean(EasyApplication.KEY_ENABLE_VIDEO, true)
-                            .putBoolean(EasyApplication.KEY_ENABLE_AUDIO, true)
-                            .apply();
-                }else if (checkedId == R.id.push_a){
-                    PreferenceManager.getDefaultSharedPreferences(SettingActivity.this)
-                            .edit()
-                            .putBoolean(EasyApplication.KEY_ENABLE_VIDEO, false)
-                            .putBoolean(EasyApplication.KEY_ENABLE_AUDIO, true)
-                            .apply();
-
-                }else if (checkedId == R.id.push_v){
-                    PreferenceManager.getDefaultSharedPreferences(SettingActivity.this)
-                            .edit()
-                            .putBoolean(EasyApplication.KEY_ENABLE_VIDEO, true)
-                            .putBoolean(EasyApplication.KEY_ENABLE_AUDIO, false)
-                            .apply();
-                }
-            }
-        });
-
-        CheckBox backgroundPushing = findViewById(R.id.enable_background_camera_pushing);
-        backgroundPushing.setChecked(PreferenceManager.getDefaultSharedPreferences(this).getBoolean(KEY_ENABLE_BACKGROUND_CAMERA, false));
-
+        // 使能摄像头后台采集
+        CheckBox backgroundPushing = (CheckBox) findViewById(R.id.enable_background_camera_pushing);
+        backgroundPushing.setChecked(SPUtil.getEnableBackgroundCamera(this));
         backgroundPushing.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(final CompoundButton buttonView, boolean isChecked) {
-                if (isChecked){
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            if (!Settings.canDrawOverlays(SettingActivity.this)) {
-
-                                new AlertDialog.Builder(SettingActivity.this).setTitle("后台上传视频").setMessage("后台上传视频需要APP出现在顶部.是否确定?").setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialogInterface, int i) {
-
-                                        final Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + BuildConfig.APPLICATION_ID));
-                                        startActivityForResult(intent, REQUEST_OVERLAY_PERMISSION);
-                                    }
-                                }).setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialogInterface, int i) {
-                                        PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit()
-                                                .putBoolean(KEY_ENABLE_BACKGROUND_CAMERA, false).apply();
-                                        buttonView.toggle();
-                                    }
-                                }).setCancelable(false).show();
-                            }
-                        }else {
-                            PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit().putBoolean(KEY_ENABLE_BACKGROUND_CAMERA, true).apply();
+                if (isChecked) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        if (Settings.canDrawOverlays(SettingActivity.this)) {
+                            SPUtil.setEnableBackgroundCamera(SettingActivity.this, true);
+                        } else {
+                            new AlertDialog
+                                    .Builder(SettingActivity.this)
+                                    .setTitle("后台上传视频")
+                                    .setMessage("后台上传视频需要APP出现在顶部.是否确定?")
+                                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialogInterface, int i) {
+                                            // 在Android 6.0后，Android需要动态获取权限，若没有权限，提示获取.
+                                            final Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + BuildConfig.APPLICATION_ID));
+                                            startActivityForResult(intent, REQUEST_OVERLAY_PERMISSION);
+                                        }
+                                    }).setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    SPUtil.setEnableBackgroundCamera(SettingActivity.this, false);
+                                    buttonView.toggle();
+                                }
+                            })
+                                    .setCancelable(false)
+                                    .show();
                         }
-                }else {
-                    PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit().putBoolean(KEY_ENABLE_BACKGROUND_CAMERA, false).apply();
+                    } else {
+                        SPUtil.setEnableBackgroundCamera(SettingActivity.this, true);
+                    }
+                } else {
+                    SPUtil.setEnableBackgroundCamera(SettingActivity.this, false);
                 }
             }
         });
 
+        // 是否使用软编码
+        CheckBox x264enc = findViewById(R.id.use_x264_encode);
+        x264enc.setChecked(SPUtil.getswCodec(this));
+        x264enc.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> SPUtil.setswCodec(this, isChecked)
+        );
 
-        CheckBox x264enc = (CheckBox) findViewById(R.id.use_x264_encode);
-        x264enc.setChecked(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("key-sw-codec", false));
+        // 使能H.265编码
+        CheckBox enable_hevc_cb = findViewById(R.id.enable_hevc);
+        enable_hevc_cb.setChecked(SPUtil.getHevcCodec(this));
+        enable_hevc_cb.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> SPUtil.setHevcCodec(this, isChecked)
+        );
 
-        x264enc.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        // 叠加水印
+        CheckBox enable_video_overlay = findViewById(R.id.enable_video_overlay);
+        enable_video_overlay.setChecked(SPUtil.getEnableVideoOverlay(this));
+        enable_video_overlay.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> SPUtil.setEnableVideoOverlay(this, isChecked)
+        );
+
+        // 推送内容
+        RadioGroup push_content = findViewById(R.id.push_content);
+
+        boolean videoEnable = SPUtil.getEnableVideo(this);
+        if (videoEnable) {
+            boolean audioEnable = SPUtil.getEnableAudio(this);
+
+            if (audioEnable) {
+                RadioButton push_av = findViewById(R.id.push_av);
+                push_av.setChecked(true);
+            } else {
+                RadioButton push_v = findViewById(R.id.push_v);
+                push_v.setChecked(true);
+            }
+        } else {
+            RadioButton push_a = findViewById(R.id.push_a);
+            push_a.setChecked(true);
+        }
+
+        push_content.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit().putBoolean("key-sw-codec", isChecked).apply();
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                if (checkedId == R.id.push_av) {
+                    SPUtil.setEnableVideo(SettingActivity.this, true);
+                    SPUtil.setEnableAudio(SettingActivity.this, true);
+                } else if (checkedId == R.id.push_a) {
+                    SPUtil.setEnableVideo(SettingActivity.this, false);
+                    SPUtil.setEnableAudio(SettingActivity.this, true);
+                } else if (checkedId == R.id.push_v) {
+                    SPUtil.setEnableVideo(SettingActivity.this, true);
+                    SPUtil.setEnableAudio(SettingActivity.this, false);
+                }
             }
         });
 
-        CheckBox enable_video_overlay = (CheckBox) findViewById(R.id.enable_video_overlay);
-        enable_video_overlay.setChecked(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("key_enable_video_overlay", false));
+        SeekBar sb = findViewById(R.id.bitrate_seekbar);
+        final TextView bitrateValue = findViewById(R.id.bitrate_value);
 
-        enable_video_overlay.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        int bitrate_added_kbps = SPUtil.getBitrateKbps(this);
+        int kbps = 72000 + bitrate_added_kbps;
+        bitrateValue.setText(kbps/1000 + "kbps");
+
+        sb.setMax(5000000);
+        sb.setProgress(bitrate_added_kbps);
+        sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit().putBoolean("key_enable_video_overlay", isChecked).apply();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                int kbps = 72000 + progress;
+                bitrateValue.setText(kbps/1000 + "kbps");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                SPUtil.setBitrateKbps(SettingActivity.this, seekBar.getProgress());
             }
         });
-
-        TextView version = findViewById(R.id.txt_version);
-        version.setText(BuildConfig.VERSION_NAME);
     }
 
-    private void showToast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    /*
+     * 二维码扫码
+     * */
+    public void onScanQRCode(View view) {
+        Intent intent = new Intent(this, ScanQRActivity.class);
+        startActivityForResult(intent, REQUEST_SCAN_TEXT_URL);
+        overridePendingTransition(R.anim.slide_bottom_in, R.anim.slide_top_out);
     }
 
+    /*
+     * 本地录像
+     * */
     public void onOpenLocalRecord(View view) {
-        startActivity(new Intent(this, MediaFilesActivity.class));
+        Intent intent = new Intent(this, MediaFilesActivity.class);
+        startActivityForResult(intent, 0);
+        overridePendingTransition(R.anim.slide_right_in, R.anim.slide_left_out);
+    }
+
+    /*
+     * 屏幕分辨率
+     * */
+    public void onScreenPushResolution(View view) {
+        int defaultIdx = SPUtil.getScreenPushingResIndex(this);
+        new AlertDialog.Builder(this).setTitle("推送屏幕分辨率").setSingleChoiceItems(
+                new CharSequence[]{"1倍屏幕大小", "0.75倍屏幕大小", "0.5倍屏幕大小", "0.3倍屏幕大小", "0.25倍屏幕大小", "0.2倍屏幕大小"}, defaultIdx, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        SPUtil.setScreenPushingResIndex(SettingActivity.this, which);
+
+                        Toast.makeText(SettingActivity.this,"配置更改将在下次启动屏幕推送时生效", Toast.LENGTH_SHORT).show();
+
+                        dialog.dismiss();
+                    }
+                }).show();
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
         if (requestCode == REQUEST_OVERLAY_PERMISSION) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 boolean canDraw = Settings.canDrawOverlays(this);
-                PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit()
-                        .putBoolean(KEY_ENABLE_BACKGROUND_CAMERA, canDraw).apply();
-                if (!canDraw){
+                SPUtil.setEnableBackgroundCamera(SettingActivity.this, canDraw);
+
+                if (!canDraw) {
                     CheckBox backgroundPushing = (CheckBox) findViewById(R.id.enable_background_camera_pushing);
                     backgroundPushing.setChecked(false);
                 }
             }
+        } else if (requestCode == REQUEST_SCAN_TEXT_URL) {
+            if (resultCode == RESULT_OK) {
+                String url = data.getStringExtra("text");
+                this.url.setText(url);
+
+                Config.setServerURL(SettingActivity.this, url);
+            }
         }
     }
 
-    public void onScreenPushResolution(View view) {
-        int defaultIdx = PreferenceManager.getDefaultSharedPreferences(this).getInt("screen_pushing_res_index", 3);
-        new AlertDialog.Builder(this).setTitle("推送屏幕分辨率").setSingleChoiceItems(
-                new CharSequence[]{"1倍屏幕大小","0.75倍屏幕大小","0.5倍屏幕大小","0.3倍屏幕大小","0.25倍屏幕大小","0.2倍屏幕大小"}, defaultIdx, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                PreferenceManager.getDefaultSharedPreferences(SettingActivity.this).edit().putInt("screen_pushing_res_index", which).apply();
-                Toast.makeText(SettingActivity.this,"配置更改将在下次启动屏幕推送时生效", Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
-            }
-        }).show();
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        return true;
+    }
+
+    @Override
+    public boolean onMenuItemClick(MenuItem menuItem) {
+        return false;
+    }
+
+    // 返回的功能
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 }

@@ -7,7 +7,6 @@
 package org.easydarwin.push;
 
 import android.content.Context;
-import android.provider.Settings;
 import android.util.Log;
 
 import org.easydarwin.bus.StreamStat;
@@ -15,12 +14,10 @@ import org.easydarwin.easypusher.BuildConfig;
 
 import static org.easydarwin.easypusher.EasyApplication.BUS;
 
-public class EasyPusher implements Pusher{
-    /*
-    *本Key为3个月临时授权License，如需商业使用，请邮件至support@easydarwin.org申请此产品的授权。
-    */
-    private static final String KEY = "6A36334A743536526D343041714E78636F794D77384F5A76636D63755A57467A65575268636E64706269356C59584E356348567A61475679567778576F4E6A7734456468646D6C754A6B4A68596D397A595541794D4445325257467A65555268636E6470626C526C5957316C59584E35";//BuildConfig.RTSP_KEY;
+public class EasyPusher implements Pusher {
     private static String TAG = "EasyPusher";
+
+    private static final String KEY = BuildConfig.RTSP_KEY;
 
     static {
         System.loadLibrary("easypusher");
@@ -35,23 +32,22 @@ public class EasyPusher implements Pusher{
         public void onCallback(int code);
 
         static class CODE {
-            public static final int EASY_ACTIVATE_INVALID_KEY = -1;       //无效Key
-            public static final int EASY_ACTIVATE_TIME_ERR = -2;       //时间错误
-            public static final int EASY_ACTIVATE_PROCESS_NAME_LEN_ERR = -3;       //进程名称长度不匹配
-            public static final int EASY_ACTIVATE_PROCESS_NAME_ERR = -4;       //进程名称不匹配
-            public static final int EASY_ACTIVATE_VALIDITY_PERIOD_ERR = -5;       //有效期校验不一致
-            public static final int EASY_ACTIVATE_PLATFORM_ERR = -6;          //平台不匹配
+            public static final int EASY_ACTIVATE_INVALID_KEY = -1;                 //无效Key
+            public static final int EASY_ACTIVATE_TIME_ERR = -2;                    //时间错误
+            public static final int EASY_ACTIVATE_PROCESS_NAME_LEN_ERR = -3;        //进程名称长度不匹配
+            public static final int EASY_ACTIVATE_PROCESS_NAME_ERR = -4;            //进程名称不匹配
+            public static final int EASY_ACTIVATE_VALIDITY_PERIOD_ERR = -5;         //有效期校验不一致
+            public static final int EASY_ACTIVATE_PLATFORM_ERR = -6;                //平台不匹配
             public static final int EASY_ACTIVATE_COMPANY_ID_LEN_ERR = -7;          //授权使用商不匹配
-            public static final int EASY_ACTIVATE_SUCCESS = 0;        //激活成功
-            public static final int EASY_PUSH_STATE_CONNECTING = 1;        //连接中
-            public static final int EASY_PUSH_STATE_CONNECTED = 2;        //连接成功
-            public static final int EASY_PUSH_STATE_CONNECT_FAILED = 3;        //连接失败
-            public static final int EASY_PUSH_STATE_CONNECT_ABORT = 4;        //连接异常中断
-            public static final int EASY_PUSH_STATE_PUSHING = 5;        //推流中
-            public static final int EASY_PUSH_STATE_DISCONNECTED = 6;        //断开连接
+            public static final int EASY_ACTIVATE_SUCCESS = 0;                      //激活成功
+            public static final int EASY_PUSH_STATE_CONNECTING = 1;                 //连接中
+            public static final int EASY_PUSH_STATE_CONNECTED = 2;                  //连接成功
+            public static final int EASY_PUSH_STATE_CONNECT_FAILED = 3;             //连接失败
+            public static final int EASY_PUSH_STATE_CONNECT_ABORT = 4;              //连接异常中断
+            public static final int EASY_PUSH_STATE_PUSHING = 5;                    //推流中
+            public static final int EASY_PUSH_STATE_DISCONNECTED = 6;               //断开连接
             public static final int EASY_PUSH_STATE_ERROR = 7;
         }
-
     }
 
     private long mPusherObj = 0;
@@ -101,9 +97,12 @@ public class EasyPusher implements Pusher{
     @Override
     public synchronized void initPush(Context context, final InitCallback callback) {
         Log.i(TAG, "PusherStart");
+
         String key = KEY;
+
         mPusherObj = init(key, context, new OnInitPusherCallback() {
             int code = Integer.MAX_VALUE;
+
             @Override
             public void onCallback(int code) {
                 if (code != this.code) {
@@ -125,34 +124,46 @@ public class EasyPusher implements Pusher{
     }
 
     public synchronized void setMediaInfo(int videoCodec, int videoFPS, int audioCodec, int audioChannel, int audioSamplerate, int audioBitPerSample){
-        if (mPusherObj == 0) return;
+        if (mPusherObj == 0)
+            return;
+
         setMediaInfo(mPusherObj, videoCodec, videoFPS, audioCodec, audioChannel, audioSamplerate, audioBitPerSample);
     }
 
     public synchronized void start(String serverIP, String serverPort, String streamName, int transType){
-        if (mPusherObj == 0) return;
+        if (mPusherObj == 0)
+            return;
+
         start(mPusherObj, serverIP, serverPort, streamName, transType);
         pushing = true;
 
     }
 
     public synchronized void push(byte[] data, int offset, int length, long timestamp, int type) {
-        if (mPusherObj == 0) return;
+        if (mPusherObj == 0)
+            return;
+
         mTotal += length;
-        if (type == 1){
+
+        if (type == 1) {
             mTotalFrms++;
         }
+
         long interval = System.currentTimeMillis() - pPreviewTS;
+
         if (interval >= 3000){
             long bps = mTotal * 1000 / (interval);
             long fps = mTotalFrms * 1000 / (interval);
+
             Log.i(TAG, String.format("bps:%d, fps:%d", fps, bps));
+
             pPreviewTS = System.currentTimeMillis();
             mTotal = 0;
             mTotalFrms = 0;
 
             BUS.post(new StreamStat((int)fps, (int)bps));
         }
+
         push(mPusherObj, data, offset, length, timestamp, type);
     }
 

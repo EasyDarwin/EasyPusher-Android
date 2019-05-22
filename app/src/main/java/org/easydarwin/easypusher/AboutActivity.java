@@ -1,60 +1,110 @@
 package org.easydarwin.easypusher;
 
 import android.databinding.DataBindingUtil;
-import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.Toolbar;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.URLSpan;
+import android.view.Menu;
+import android.view.MenuItem;
 
 import org.easydarwin.easypusher.databinding.ActivityAboutBinding;
 
-public class AboutActivity extends AppCompatActivity {
+/**
+ * 关于我们
+ * */
+public class AboutActivity extends AppCompatActivity implements Toolbar.OnMenuItemClickListener {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ActivityAboutBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_about);
-        setSupportActionBar(binding.toolbar);
-        binding.desc.setText("EasyPusher是EasyDarwin开源流媒体团队开发的一个推送流媒体音/视频流给开源流媒体服务器EasyDarwin的标准RTSP/RTP协议推送库，全平台支持(包括Windows/Linux(32 & 64)，ARM各平台，Android、IOS)，通过EasyPusher我们就可以避免接触到稍显复杂的RTSP/RTP/RTCP推送流程，只需要调用EasyPusher的几个API接口，就能轻松、稳定地把流媒体音视频数据推送给EasyDarwin服务器进行转发和分发，EasyPusher经过长时间的企业用户检验，稳定性非常高; 项目地址：");
-        binding.desc.setMovementMethod(LinkMovementMethod.getInstance());
-        SpannableString
-        spannableString = new SpannableString("https://github.com/EasyDarwin/EasyPusher");
+
+        setSupportActionBar(binding.mainToolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        binding.mainToolbar.setOnMenuItemClickListener(this);
+        // 左边的小箭头（注意需要在setSupportActionBar(toolbar)之后才有效果）
+        binding.mainToolbar.setNavigationIcon(R.drawable.com_back);
+
+        binding.version.setText("EasyRTSP Android 推流器");
+        binding.version.append("(");
+
+        SpannableString spannableString;
+        if (EasyApplication.activeDays >= 9999) {
+            spannableString = new SpannableString("激活码永久有效");
+            spannableString.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorGREEN)),
+                    0,
+                    spannableString.length(),
+                    Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+        } else if (EasyApplication.activeDays > 0) {
+            spannableString = new SpannableString(String.format("激活码还剩%d天可用", EasyApplication.activeDays));
+            spannableString.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorYELLOW)),
+                    0,
+                    spannableString.length(),
+                    Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+        } else {
+            spannableString = new SpannableString(String.format("激活码已过期(%d)", EasyApplication.activeDays));
+            spannableString.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorRED)),
+                    0,
+                    spannableString.length(),
+                    Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+        }
+
+        binding.version.append(spannableString);
+        binding.version.append(")");
+
+        binding.serverTitle.setText("-EasyDarwin RTSP流媒体服务器：\n");
+        binding.serverTitle.setMovementMethod(LinkMovementMethod.getInstance());
+
+        spannableString = new SpannableString("http://www.easydarwin.org");
         //设置下划线文字
-        spannableString.setSpan(new URLSpan("https://github.com/EasyDarwin/EasyPusher"), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+        spannableString.setSpan(new URLSpan("http://www.easydarwin.org"), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
 
         //设置文字的前景色
-        spannableString.setSpan(new ForegroundColorSpan(Color.RED), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+        spannableString.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorTheme)),
+                0,
+                spannableString.length(),
+                Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
 
-        binding.desc.append(spannableString);
+        binding.serverTitle.append(spannableString);
 
-
-        binding.desc.append("\n播放端可以使用");
-
-
-        spannableString = new SpannableString("EasyPlayer");
+        binding.playerTitle.setText("-EasyPlayerPro全功能播放器：\n");
+        binding.playerTitle.setMovementMethod(LinkMovementMethod.getInstance());
+        spannableString = new SpannableString("https://github.com/EasyDSS/EasyPlayerPro");
         //设置下划线文字
-        spannableString.setSpan(new URLSpan("https://fir.im/EasyPlayer"), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-        //设置文字的前景色
-        spannableString.setSpan(new ForegroundColorSpan(Color.RED), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-        binding.desc.append(spannableString);
-
-
-        binding.desc.append("或者");
-
-
-
-        spannableString = new SpannableString("EasyPlayerPro");
-        //设置下划线文字
-        spannableString.setSpan(new URLSpan("https://fir.im/EasyPlayerPro"), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+        spannableString.setSpan(new URLSpan("https://github.com/EasyDSS/EasyPlayerPro"), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
 
         //设置文字的前景色
-        spannableString.setSpan(new ForegroundColorSpan(Color.RED), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-        binding.desc.append(spannableString);
+        spannableString.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorTheme)),
+                0,
+                spannableString.length(),
+                Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
 
-        binding.desc.append(".二维码如下：");
+        binding.playerTitle.append(spannableString);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        return true;
+    }
+
+    @Override
+    public boolean onMenuItemClick(MenuItem menuItem) {
+        return false;
+    }
+
+    // 返回的功能
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 }
