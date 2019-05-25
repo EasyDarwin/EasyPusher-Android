@@ -68,12 +68,19 @@
                         android:src="@drawable/qr_scan_btn" />
                 </LinearLayout>
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="10dp"
+                    android:paddingLeft="5dp"
+                    android:paddingRight="5dp"
+                    android:text="注:如果支持屏幕推送,屏幕推送的ID为:'摄像头直播流ID_s'\n比如若摄像头直播流ID为'android_123',那屏幕推送ID就是'android_123_s'" />
 
                 <CheckBox
                     android:id="@+id/enable_background_camera_pushing"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
                     android:checked="false"
                     android:text="使能摄像头后台采集" />
 
@@ -88,33 +95,9 @@
                     android:layout_height="wrap_content"
                     android:paddingLeft="5dp"
                     android:paddingRight="5dp"
-                    android:text="EasyRTMP默认使用H.264格式来编码视频。如果需要使用H.265，请勾选下面的单选框。\n注：H.265可能在某些设备上不支持，这种情况下会自动切换为H.264格式" />
+                    android:layout_marginTop="8dp"
+                    android:text="EasyPusher默认使用硬编码推送视频。如果需要测试软编码，请勾选下面的单选框" />
 
-                <CheckBox
-                    android:id="@+id/enable_hevc"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:checked="false"
-                    android:text="使能H.265编码" />
-
-                <!--<android.support.v7.widget.SwitchCompat-->
-                <!--android:id="@+id/transport_mode"-->
-                <!--android:layout_width="match_parent"-->
-                <!--android:layout_height="wrap_content"-->
-                <!--android:layout_marginTop="8dp"-->
-                <!--android:padding="6dp"-->
-                <!--app:showText="true"-->
-                <!--android:text="传输协议"-->
-                <!--android:textOn="H.264"-->
-                <!--android:textOff="H.265"/>-->
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingLeft="5dp"
-                    android:paddingRight="5dp"
-                    android:text="EasyRTMP默认使用硬编码推送视频。如果需要测试软编码，请勾选下面的单选框。\n注：软编码情况下，仅支持H.264编码格式" />
                 <CheckBox
                     android:id="@+id/use_x264_encode"
                     android:layout_width="match_parent"
@@ -136,39 +119,11 @@
                     android:checked="false"
                     android:text="叠加水印" />
 
-                <LinearLayout
+                <View
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:paddingLeft="5dp"
-                    android:paddingRight="5dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="码率:" />
-
-                    <TextView
-                        android:id="@+id/bitrate_value"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="1023Kbps" />
-
-                </LinearLayout>
-
-                <android.support.v7.widget.AppCompatSeekBar
-                    android:id="@+id/bitrate_seekbar"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:max="100" />
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingLeft="5dp"
-                    android:paddingRight="5dp"
-                    android:text="硬编码码率可能设置值与实际值不完全准" />
-
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="5dp"
+                    android:background="?android:attr/listDivider" />
 
                 <TextView
                     android:layout_width="match_parent"

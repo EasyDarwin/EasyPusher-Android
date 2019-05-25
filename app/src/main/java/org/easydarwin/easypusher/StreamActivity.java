@@ -377,7 +377,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
 
     private void startCamera() {
         mMediaStream.updateResolution(width, height);
-        mMediaStream.setDisplayRotationDegree(getDisplayRotationDegree());
+        mMediaStream.setDgree(getDisplayRotationDegree());
         mMediaStream.createCamera();
         mMediaStream.startPreview();
 

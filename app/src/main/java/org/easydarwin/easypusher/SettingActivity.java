@@ -117,13 +117,6 @@ public class SettingActivity extends AppCompatActivity implements Toolbar.OnMenu
                 (buttonView, isChecked) -> SPUtil.setswCodec(this, isChecked)
         );
 
-        // 使能H.265编码
-        CheckBox enable_hevc_cb = findViewById(R.id.enable_hevc);
-        enable_hevc_cb.setChecked(SPUtil.getHevcCodec(this));
-        enable_hevc_cb.setOnCheckedChangeListener(
-                (buttonView, isChecked) -> SPUtil.setHevcCodec(this, isChecked)
-        );
-
         // 叠加水印
         CheckBox enable_video_overlay = findViewById(R.id.enable_video_overlay);
         enable_video_overlay.setChecked(SPUtil.getEnableVideoOverlay(this));
@@ -163,33 +156,6 @@ public class SettingActivity extends AppCompatActivity implements Toolbar.OnMenu
                     SPUtil.setEnableVideo(SettingActivity.this, true);
                     SPUtil.setEnableAudio(SettingActivity.this, false);
                 }
-            }
-        });
-
-        SeekBar sb = findViewById(R.id.bitrate_seekbar);
-        final TextView bitrateValue = findViewById(R.id.bitrate_value);
-
-        int bitrate_added_kbps = SPUtil.getBitrateKbps(this);
-        int kbps = 72000 + bitrate_added_kbps;
-        bitrateValue.setText(kbps/1000 + "kbps");
-
-        sb.setMax(5000000);
-        sb.setProgress(bitrate_added_kbps);
-        sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                int kbps = 72000 + progress;
-                bitrateValue.setText(kbps/1000 + "kbps");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                SPUtil.setBitrateKbps(SettingActivity.this, seekBar.getProgress());
             }
         });
     }

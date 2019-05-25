@@ -23,21 +23,6 @@ public class SPUtil {
                 .apply();
     }
 
-    /* ============================ 使能H.265编码 ============================ */
-    private static final String KEY_HEVC_CODEC = "key-hevc-codec";
-
-    public static boolean getHevcCodec(Context context) {
-        return PreferenceManager.getDefaultSharedPreferences(context)
-                .getBoolean(KEY_HEVC_CODEC, false);
-    }
-
-    public static void setHevcCodec(Context context, boolean isChecked) {
-        PreferenceManager.getDefaultSharedPreferences(context)
-                .edit()
-                .putBoolean(KEY_HEVC_CODEC, isChecked)
-                .apply();
-    }
-
     /* ============================ 叠加水印 ============================ */
     private static final String KEY_ENABLE_VIDEO_OVERLAY = "key_enable_video_overlay";
 
@@ -51,21 +36,6 @@ public class SPUtil {
                 .edit()
                 .putBoolean(KEY_ENABLE_VIDEO_OVERLAY, isChecked)
                 .apply();
-    }
-
-    /* ============================ 码率 ============================ */
-    private static final String KEY_BITRATE_ADDED_KBPS = "bitrate_added_kbps";
-
-    public static int getBitrateKbps(Context context) {
-        return PreferenceManager.getDefaultSharedPreferences(context)
-                .getInt(KEY_BITRATE_ADDED_KBPS, 300000);
-    }
-
-    public static void setBitrateKbps(Context context, int value) {
-         PreferenceManager.getDefaultSharedPreferences(context)
-                 .edit()
-                 .putInt(KEY_BITRATE_ADDED_KBPS, value)
-                 .apply();
     }
 
     /* ============================ 推送屏幕分辨率 ============================ */
@@ -143,5 +113,35 @@ public class SPUtil {
                 .edit()
                 .putBoolean(KEY_SCREEN_PUSHING, true)
                 .apply();
+    }
+
+//    /* ============================ 使能H.265编码 ============================ */
+//    private static final String KEY_HEVC_CODEC = "key-hevc-codec";
+//
+//    public static boolean getHevcCodec(Context context) {
+//        return PreferenceManager.getDefaultSharedPreferences(context)
+//                .getBoolean(KEY_HEVC_CODEC, false);
+//    }
+//
+//    public static void setHevcCodec(Context context, boolean isChecked) {
+//        PreferenceManager.getDefaultSharedPreferences(context)
+//                .edit()
+//                .putBoolean(KEY_HEVC_CODEC, isChecked)
+//                .apply();
+//    }
+
+    /* ============================ 码率 ============================ */
+    private static final String KEY_BITRATE_ADDED_KBPS = "bitrate_added_kbps";
+
+    public static int getBitrateKbps(Context context) {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getInt(KEY_BITRATE_ADDED_KBPS, 300000);
+    }
+
+    public static void setBitrateKbps(Context context, int value) {
+         PreferenceManager.getDefaultSharedPreferences(context)
+                 .edit()
+                 .putInt(KEY_BITRATE_ADDED_KBPS, value)
+                 .apply();
     }
 }

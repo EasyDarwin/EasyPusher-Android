@@ -1,13 +1,13 @@
-package org.easydarwin.muxer;
+package org.easydarwin.push;
 
 import android.content.Context;
+import android.preference.PreferenceManager;
 
 import org.easydarwin.encode.SWConsumer;
 import org.easydarwin.encode.VideoConsumer;
 import org.easydarwin.encode.VideoConsumerWrapper;
-import org.easydarwin.encode.HWConsumer;
+import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.TxtOverlay;
-import org.easydarwin.util.SPUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -15,14 +15,12 @@ import java.util.Date;
 public class RecordVideoConsumer implements VideoConsumerWrapper {
 
     VideoConsumer consumer;
-
     private TxtOverlay overlay;
     private final Context context;
 
-    public RecordVideoConsumer(Context context, String mime, boolean swCodec, EasyMuxer muxer) {
+    public RecordVideoConsumer(Context context, boolean swCodec, EasyMuxer muxer) {
         this.context = context;
-
-        consumer = swCodec ? new SWConsumer(context, null) : new HWConsumer(context, mime, null);
+        consumer = swCodec ? new SWConsumer(context, null):new HWConsumer(context, null);
         consumer.setMuxer(muxer);
     }
 
@@ -35,11 +33,10 @@ public class RecordVideoConsumer implements VideoConsumerWrapper {
 
     @Override
     public int onVideo(byte[] data, int format) {
-        if (SPUtil.getEnableVideoOverlay(context)) {
+        if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("key_enable_video_overlay", false)) {
             String txt = new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
             overlay.overlay(data, txt);
         }
-
         return consumer.onVideo(data, format);
     }
 
