@@ -30,7 +30,7 @@ public class AboutActivity extends AppCompatActivity implements Toolbar.OnMenuIt
         // 左边的小箭头（注意需要在setSupportActionBar(toolbar)之后才有效果）
         binding.mainToolbar.setNavigationIcon(R.drawable.com_back);
 
-        binding.version.setText("EasyRTSP Android 推流器");
+        binding.version.setText("EasyPusher Android 推流器");
         binding.version.append("(");
 
         SpannableString spannableString;
@@ -57,34 +57,34 @@ public class AboutActivity extends AppCompatActivity implements Toolbar.OnMenuIt
         binding.version.append(spannableString);
         binding.version.append(")");
 
-        binding.serverTitle.setText("-EasyDarwin RTSP流媒体服务器：\n");
-        binding.serverTitle.setMovementMethod(LinkMovementMethod.getInstance());
-
-        spannableString = new SpannableString("http://www.easydarwin.org");
-        //设置下划线文字
-        spannableString.setSpan(new URLSpan("http://www.easydarwin.org"), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-
-        //设置文字的前景色
-        spannableString.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorTheme)),
-                0,
-                spannableString.length(),
-                Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-
-        binding.serverTitle.append(spannableString);
-
-        binding.playerTitle.setText("-EasyPlayerPro全功能播放器：\n");
-        binding.playerTitle.setMovementMethod(LinkMovementMethod.getInstance());
-        spannableString = new SpannableString("https://github.com/EasyDSS/EasyPlayerPro");
-        //设置下划线文字
-        spannableString.setSpan(new URLSpan("https://github.com/EasyDSS/EasyPlayerPro"), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-
-        //设置文字的前景色
-        spannableString.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorTheme)),
-                0,
-                spannableString.length(),
-                Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-
-        binding.playerTitle.append(spannableString);
+//        binding.serverTitle.setText("-EasyDarwin RTSP流媒体服务器：\n");
+//        binding.serverTitle.setMovementMethod(LinkMovementMethod.getInstance());
+//
+//        spannableString = new SpannableString("http://www.easydarwin.org");
+//        //设置下划线文字
+//        spannableString.setSpan(new URLSpan("http://www.easydarwin.org"), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+//
+//        //设置文字的前景色
+//        spannableString.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorTheme)),
+//                0,
+//                spannableString.length(),
+//                Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+//
+//        binding.serverTitle.append(spannableString);
+//
+//        binding.playerTitle.setText("-EasyPlayerPro全功能播放器：\n");
+//        binding.playerTitle.setMovementMethod(LinkMovementMethod.getInstance());
+//        spannableString = new SpannableString("https://github.com/EasyDSS/EasyPlayerPro");
+//        //设置下划线文字
+//        spannableString.setSpan(new URLSpan("https://github.com/EasyDSS/EasyPlayerPro"), 0, spannableString.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+//
+//        //设置文字的前景色
+//        spannableString.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorTheme)),
+//                0,
+//                spannableString.length(),
+//                Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+//
+//        binding.playerTitle.append(spannableString);
     }
 
     @Override
