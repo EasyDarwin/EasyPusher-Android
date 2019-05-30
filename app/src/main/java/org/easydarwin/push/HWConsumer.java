@@ -8,7 +8,6 @@ import android.os.Bundle;
 import android.util.Log;
 
 import org.easydarwin.easypusher.BuildConfig;
-import org.easydarwin.encode.VideoConsumer;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
 
@@ -21,8 +20,6 @@ import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV4
 import static org.easydarwin.push.MediaStream.info;
 
 /**
- * 视频硬编码器
- *
  * Created by apple on 2017/5/13.
  */
 public class HWConsumer extends Thread implements VideoConsumer {

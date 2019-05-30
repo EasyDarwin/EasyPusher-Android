@@ -1,4 +1,4 @@
-package org.easydarwin.encode;
+package org.easydarwin.push;
 
 import android.content.Context;
 import android.media.MediaCodec;
@@ -7,20 +7,16 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import org.easydarwin.muxer.EasyMuxer;
-import org.easydarwin.push.BitrateStat;
-import org.easydarwin.push.Pusher;
 import org.easydarwin.sw.JNIUtil;
 import org.easydarwin.sw.X264Encoder;
-import org.easydarwin.util.SPUtil;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 
 /**
- * 视频软编码器
- *
  * Created by apple on 2017/5/13.
  */
+
 public class SWConsumer extends Thread implements VideoConsumer {
     private static final String TAG = "SWConsumer";
     private int mHeight;

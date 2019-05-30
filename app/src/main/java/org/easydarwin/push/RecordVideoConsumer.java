@@ -3,9 +3,6 @@ package org.easydarwin.push;
 import android.content.Context;
 import android.preference.PreferenceManager;
 
-import org.easydarwin.encode.SWConsumer;
-import org.easydarwin.encode.VideoConsumer;
-import org.easydarwin.encode.VideoConsumerWrapper;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.TxtOverlay;
 

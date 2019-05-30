@@ -18,14 +18,11 @@ import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import org.easydarwin.audio.AudioStream;
 import org.easydarwin.bus.SupportResolution;
 import org.easydarwin.easypusher.BackgroundCameraService;
 import org.easydarwin.easypusher.BuildConfig;
 import org.easydarwin.easypusher.EasyApplication;
-import org.easydarwin.audio.AudioStream;
-import org.easydarwin.encode.ClippableVideoConsumer;
-import org.easydarwin.encode.SWConsumer;
-import org.easydarwin.encode.VideoConsumer;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
 import org.easydarwin.util.SPUtil;
@@ -50,9 +47,6 @@ import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420S
 import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar;
 import static org.easydarwin.easypusher.EasyApplication.BUS;
 
-/**
- * 摄像头实时数据采集，并调用相关编码器
- * */
 public class MediaStream {
     private static final boolean VERBOSE = BuildConfig.DEBUG;
     private static final int SWITCH_CAMERA = 11;

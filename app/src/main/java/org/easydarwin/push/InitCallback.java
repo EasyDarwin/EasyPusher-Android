@@ -5,5 +5,5 @@ package org.easydarwin.push;
  */
 
 public interface InitCallback {
-    void onCallback(int code);
+    public void onCallback(int code);
 }

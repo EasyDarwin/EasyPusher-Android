@@ -21,9 +21,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-/**
- * 音频硬编码器
- * */
+
 public class AudioStream {
     private static AudioStream _this;
     private final Context context;
