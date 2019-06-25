@@ -183,15 +183,6 @@
                     android:layout_marginTop="15dp"
                     android:text="推送屏幕分辨率" />
 
-                <Button
-                    android:id="@+id/btn_save"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:background="@color/colorTheme"
-                    android:textColor="#ffffff"
-                    android:layout_marginTop="15dp"
-                    android:text="保存" />
-
             </LinearLayout>
         </ScrollView>
 

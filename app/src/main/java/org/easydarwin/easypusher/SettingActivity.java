@@ -58,17 +58,6 @@ public class SettingActivity extends AppCompatActivity implements Toolbar.OnMenu
         url = (EditText) findViewById(R.id.push_url);
         url.setText(Config.getServerURL(this));
 
-        Button btnSave = (Button) findViewById(R.id.btn_save);
-        btnSave.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String url = SettingActivity.this.url.getText().toString().trim();
-                Config.setServerURL(SettingActivity.this, url);
-
-                finish();
-            }
-        });
-
         // 使能摄像头后台采集
         CheckBox backgroundPushing = (CheckBox) findViewById(R.id.enable_background_camera_pushing);
         backgroundPushing.setChecked(SPUtil.getEnableBackgroundCamera(this));
