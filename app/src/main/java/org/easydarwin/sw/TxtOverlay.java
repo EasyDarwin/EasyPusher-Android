@@ -22,7 +22,7 @@ public class TxtOverlay {
     }
     private long ctx;
 
-    public void init(int width, int height,String fonts) {
+    public void init(int width, int height, String fonts) {
         if (TextUtils.isEmpty(fonts)){
             throw new IllegalArgumentException("the font file must be valid!");
         }

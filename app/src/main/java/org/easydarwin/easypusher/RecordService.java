@@ -3,12 +3,7 @@ package org.easydarwin.easypusher;
 import android.annotation.TargetApi;
 import android.app.Service;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.MediaCodec;
@@ -16,15 +11,12 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
-import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
-import android.support.v7.app.AlertDialog;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -35,19 +27,16 @@ import android.view.Surface;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.WindowManager;
-import android.widget.ImageButton;
-import android.widget.Toast;
 
 import org.easydarwin.audio.AudioStream;
 import org.easydarwin.push.EasyPusher;
 import org.easydarwin.push.Pusher;
+import org.easydarwin.util.Config;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static org.easydarwin.easypusher.SettingActivity.REQUEST_OVERLAY_PERMISSION;
-
-
+@TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public class RecordService extends Service {
 
     private static final String TAG = "RService";
@@ -64,8 +53,6 @@ public class RecordService extends Service {
 
     private WindowManager wm;
     final AudioStream audioStream = AudioStream.getInstance();
-
-
 
     private MediaCodec.BufferInfo mBufferInfo = new MediaCodec.BufferInfo();
 
@@ -278,62 +265,58 @@ public class RecordService extends Service {
             @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             @Override
             public void run() {
-                String url = null;
-                if (EasyApplication.isRTMP()) {
+                mEasyPusher = new EasyPusher();
+                String ip = Config.getIp(RecordService.this);
+                String port = Config.getPort(RecordService.this);
+                String id = Config.getId(RecordService.this);
+                mEasyPusher.initPush( getApplicationContext(), null);
+                mEasyPusher.setMediaInfo(Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
+                mEasyPusher.start(ip,port,String.format("%s_s.sdp", id), Pusher.TransType.EASY_RTP_OVER_TCP);
 
-                }else{
-                    mEasyPusher = new EasyPusher();
-                    String ip = EasyApplication.getEasyApplication().getIp();
-                    String port = EasyApplication.getEasyApplication().getPort();
-                    String id = EasyApplication.getEasyApplication().getId();
-                    mEasyPusher.initPush( getApplicationContext(), null);
-                    mEasyPusher.setMediaInfo(Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
-                    mEasyPusher.start(ip,port,String.format("%s_s.sdp", id), Pusher.TransType.EASY_RTP_OVER_TCP);
-                }
                 try {
                     audioStream.addPusher(mEasyPusher);
                     while (mPushThread != null) {
                         int index = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 10000);
                         Log.i(TAG, "dequeue output buffer index=" + index);
 
-                            if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {//请求超时
-                                try {
-                                    // wait 10ms
-                                    Thread.sleep(10);
-                                } catch (InterruptedException e) {
+                        if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {//请求超时
+                            try {
+                                // wait 10ms
+                                Thread.sleep(10);
+                            } catch (InterruptedException e) {
+                            }
+                        } else if (index >= 0) {//有效输出
+
+                            ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(index);
+
+
+                            byte[] outData = new byte[mBufferInfo.size];
+                            outputBuffer.get(outData);
+
+                            //                        String data0 = String.format("%x %x %x %x %x %x %x %x %x %x ", outData[0], outData[1], outData[2], outData[3], outData[4], outData[5], outData[6], outData[7], outData[8], outData[9]);
+                            //                        Log.e("out_data", data0);
+
+                            //记录pps和sps
+                            int type = outData[4] & 0x07;
+                            if (type == 7 || type == 8) {
+                                mPpsSps = outData;
+                            } else if (type == 5) {
+                                //在关键帧前面加上pps和sps数据
+                                if (mPpsSps != null) {
+                                    byte[] iframeData = new byte[mPpsSps.length + outData.length];
+                                    System.arraycopy(mPpsSps, 0, iframeData, 0, mPpsSps.length);
+                                    System.arraycopy(outData, 0, iframeData, mPpsSps.length, outData.length);
+                                    outData = iframeData;
                                 }
-                            } else if (index >= 0) {//有效输出
-
-                                ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(index);
-
-
-                                byte[] outData = new byte[mBufferInfo.size];
-                                outputBuffer.get(outData);
-
-    //                        String data0 = String.format("%x %x %x %x %x %x %x %x %x %x ", outData[0], outData[1], outData[2], outData[3], outData[4], outData[5], outData[6], outData[7], outData[8], outData[9]);
-    //                        Log.e("out_data", data0);
-
-                                //记录pps和sps
-                                int type = outData[4] & 0x07;
-                                if (type == 7 || type == 8) {
-                                    mPpsSps = outData;
-                                } else if (type == 5) {
-                                    //在关键帧前面加上pps和sps数据
-                                    if (mPpsSps != null) {
-                                        byte[] iframeData = new byte[mPpsSps.length + outData.length];
-                                        System.arraycopy(mPpsSps, 0, iframeData, 0, mPpsSps.length);
-                                        System.arraycopy(outData, 0, iframeData, mPpsSps.length, outData.length);
-                                        outData = iframeData;
-                                    }
-                                }
-
-                                mEasyPusher.push(outData, mBufferInfo.presentationTimeUs / 1000, 1);
-
-
-                                mMediaCodec.releaseOutputBuffer(index, false);
                             }
 
+                            mEasyPusher.push(outData, mBufferInfo.presentationTimeUs / 1000, 1);
+
+
+                            mMediaCodec.releaseOutputBuffer(index, false);
                         }
+
+                    }
                 }finally {
                     audioStream.removePusher(mEasyPusher);
                 }

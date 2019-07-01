@@ -22,7 +22,6 @@ import java.util.Iterator;
 import java.util.Set;
 
 
-
 public class AudioStream {
     private static AudioStream _this;
     private final Context context;

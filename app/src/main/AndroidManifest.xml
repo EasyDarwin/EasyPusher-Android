@@ -7,27 +7,26 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.SYSTEM_OVERLAY_WINDOW"/>
+
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.READ_LOGS" />
 
     <uses-feature android:name="android.hardware.camera" />
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-
-    <!--https://bugly.qq.com/docs/user-guide/instruction-manual-android/?v=20180709165613#_2-->
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.READ_LOGS" />
-
     <application
         android:name=".EasyApplication"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_launcher_foreground"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
         <activity
             android:name=".SplashActivity"
             android:launchMode="singleTask"
@@ -36,27 +35,34 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter></activity>
-        <activity
-            android:name=".SettingActivity"
-            android:screenOrientation="portrait"></activity>
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".StreamActivity"
             android:launchMode="singleInstance"
-            android:screenOrientation="portrait">
-        </activity>
+            android:screenOrientation="portrait"></activity>
+
+        <activity android:name=".AboutActivity" />
+
+        <activity
+            android:name=".SettingActivity"
+            android:screenOrientation="portrait" />
+
+        <activity android:name=".ScanQRActivity" />
+
+        <activity
+            android:name=".MediaFilesActivity"
+            android:label="文件夹" />
 
         <service
             android:name=".RecordService"
             android:enabled="true" />
+
         <service
             android:name=".BackgroundCameraService"
             android:enabled="true" />
 
-        <activity
-            android:name="org.easydarwin.easypusher.MediaFilesActivity"
-            android:label="文件夹" />
-        <activity android:name=".AboutActivity"></activity>
     </application>
 
 </manifest>

@@ -11,8 +11,12 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.view.WindowManager;
 import android.widget.TextView;
 
+/**
+ * 启动页
+ * */
 public class SplashActivity extends Activity {
 
     @Override
@@ -20,8 +24,9 @@ public class SplashActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.splash_activity);
 
-        new Handler().postDelayed(new Runnable() {
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN); //隐藏状态栏
 
+        new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 startActivity(new Intent(SplashActivity.this, StreamActivity.class));
@@ -29,16 +34,15 @@ public class SplashActivity extends Activity {
             }
         }, 2000);
 
-        String versionname;
+        String versionName;
+
         try {
-            versionname = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
         } catch (PackageManager.NameNotFoundException e) {
-            versionname = getResources().getString(R.string.version);
+            versionName = getResources().getString(R.string.version);
         }
 
         TextView txtVersion = (TextView) findViewById(R.id.txt_version);
-        txtVersion.setText(String.format("v%s", versionname));
-
+        txtVersion.setText(String.format("v%s", versionName));
     }
-
 }

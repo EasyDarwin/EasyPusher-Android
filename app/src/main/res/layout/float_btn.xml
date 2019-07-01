@@ -1,8 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TextView
-    android:layout_width="50dp"
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:text="推流中"
-    android:background="#66ffffff"
-    android:gravity="center"
-    android:layout_height="40dp" />
+    android:layout_width="@dimen/float_btn_width"
+    android:layout_height="@dimen/float_btn_height">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:scaleType="fitXY"
+        android:src="@drawable/float_button"
+        android:text="推流中" />
+
+    <ImageView
+        android:id="@+id/action_push_error"
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:layout_gravity="right|bottom"
+        android:src="@drawable/ic_action_push_error"
+        android:text="推流中"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/text"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:text="111" />
+
+</FrameLayout>

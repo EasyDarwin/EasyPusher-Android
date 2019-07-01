@@ -20,14 +20,14 @@
 
 package org.easydarwin.hw;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
-
 import android.annotation.SuppressLint;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 @SuppressLint("InlinedApi")
 public class CodecManager {
@@ -65,7 +65,7 @@ public class CodecManager {
 		ArrayList<Codec> encoders = new ArrayList<Codec>();
 
 		// We loop through the encoders, apparently this can take up to a sec (testes on a GS3)
-		for(int j =0; j <  MediaCodecList.getCodecCount() - 1; j++){
+		for(int j = 0; j <  MediaCodecList.getCodecCount() - 1; j++){
 			MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(j);
 			if (!codecInfo.isEncoder()) continue;
 

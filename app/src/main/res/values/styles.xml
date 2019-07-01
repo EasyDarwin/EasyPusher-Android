@@ -5,9 +5,10 @@
         <!-- Customize your theme here. -->
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorPrimary">@color/colorTheme</item><!--Appbar背景色-->
+        <item name="colorPrimaryDark">@color/colorTheme</item><!--状态栏颜色-->
+        <item name="colorAccent">@color/colorTheme</item><!--控制各个控件被选中时的颜色-->
+        <item name="toolbarStyle">@style/toolbar</item>
     </style>
 
     <style name="toolbar" parent="Base.Widget.AppCompat.Toolbar">

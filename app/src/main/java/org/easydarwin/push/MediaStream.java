@@ -25,6 +25,7 @@ import org.easydarwin.easypusher.BuildConfig;
 import org.easydarwin.easypusher.EasyApplication;
 import org.easydarwin.muxer.EasyMuxer;
 import org.easydarwin.sw.JNIUtil;
+import org.easydarwin.util.SPUtil;
 import org.easydarwin.util.Util;
 
 import java.io.File;
@@ -136,7 +137,7 @@ public class MediaStream {
     }
 
     public void startStream(String url, InitCallback callback) {
-        if (PreferenceManager.getDefaultSharedPreferences(EasyApplication.getEasyApplication()).getBoolean(EasyApplication.KEY_ENABLE_VIDEO, true))
+        if (SPUtil.getEnableVideo(EasyApplication.getEasyApplication()))
             mEasyPusher.initPush(url, mApplicationContext, callback);
         else
             mEasyPusher.initPush(url, mApplicationContext, callback, ~0);
