@@ -149,6 +149,16 @@ public class SettingActivity extends AppCompatActivity implements Toolbar.OnMenu
         });
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        String text = url.getText().toString().trim();
+        if (text.toLowerCase().startsWith("rtsp://")) {
+            Config.setServerURL(SettingActivity.this, text);
+        }
+    }
+
     /*
      * 二维码扫码
      * */
