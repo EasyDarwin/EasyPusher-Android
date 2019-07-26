@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="org.easydarwin.easypusher.StreamActivity">
+    tools:context="org.easydarwin.easypusher.StreamActivity"
+    android:background="#000000">
 
     <TextureView
         android:id="@+id/sv_surfaceview"
