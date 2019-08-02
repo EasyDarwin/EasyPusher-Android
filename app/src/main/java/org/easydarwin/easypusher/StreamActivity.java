@@ -760,7 +760,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                             sendMessage("平台不匹配");
                             break;
                         case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_COMPANY_ID_LEN_ERR:
-                            sendMessage("断授权使用商不匹配");
+                            sendMessage("COMPANY不匹配");
                             break;
                         case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_PROCESS_NAME_LEN_ERR:
                             sendMessage("进程名称长度不匹配");
