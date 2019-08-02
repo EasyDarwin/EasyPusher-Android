@@ -480,7 +480,7 @@ public class MediaStream extends Service implements LifecycleObserver {
                         msg = ("平台不匹配");
                         break;
                     case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_COMPANY_ID_LEN_ERR:
-                        msg = ("断授权使用商不匹配");
+                        msg = ("授权使用商不匹配");
                         break;
                     case EasyPusher.OnInitPusherCallback.CODE.EASY_ACTIVATE_PROCESS_NAME_LEN_ERR:
                         msg = ("进程名称长度不匹配");

@@ -14,9 +14,6 @@ import org.easydarwin.easypusher.BuildConfig;
 
 
 public class EasyPusher implements Pusher {
-    /*
-    *本Key为3个月临时授权License，如需商业使用，请邮件至support@easydarwin.org申请此产品的授权。
-    */
     private static final String KEY = BuildConfig.RTSP_PUSHER_KEY;
     private static String TAG = "EasyPusher";
 
