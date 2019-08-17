@@ -12,8 +12,10 @@ import android.media.MediaFormat;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
@@ -35,6 +37,8 @@ import org.easydarwin.util.Config;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import static android.media.MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME;
 
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public class RecordService extends Service {
@@ -64,6 +68,9 @@ public class RecordService extends Service {
     private WindowManager.LayoutParams param;
     private GestureDetector mGD;
     private View.OnTouchListener listener;
+
+    private MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+    private ByteBuffer[] outputBuffers;
 
     @Nullable
     @Override
@@ -260,8 +267,10 @@ public class RecordService extends Service {
     }
 
     private void startPush() {
-        if (mPushThread != null) return;
-        mPushThread = new Thread(){
+        if (mPushThread != null)
+            return;
+
+        mPushThread = new Thread() {
             @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             @Override
             public void run() {
@@ -269,55 +278,102 @@ public class RecordService extends Service {
                 String ip = Config.getIp(RecordService.this);
                 String port = Config.getPort(RecordService.this);
                 String id = Config.getId(RecordService.this);
+
                 mEasyPusher.initPush( getApplicationContext(), null);
                 mEasyPusher.setMediaInfo(Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
                 mEasyPusher.start(ip,port,String.format("%s_s.sdp", id), Pusher.TransType.EASY_RTP_OVER_TCP);
 
                 try {
                     audioStream.addPusher(mEasyPusher);
+
+                    byte[] h264 = new byte[windowWidth * windowHeight];
+                    long lastKeyFrameUS = 0, lastRequestKeyFrameUS = 0;
+
                     while (mPushThread != null) {
-                        int index = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 10000);
-                        Log.i(TAG, "dequeue output buffer index=" + index);
+                        if (lastKeyFrameUS > 0 && SystemClock.elapsedRealtimeNanos() / 1000 - lastKeyFrameUS >= 3000000) {  // 3s no key frame.
+                            if (SystemClock.elapsedRealtimeNanos() / 1000 - lastRequestKeyFrameUS >= 3000000) {
+                                Bundle p = new Bundle();
+                                p.putInt(PARAMETER_KEY_REQUEST_SYNC_FRAME, 0);
+                                mMediaCodec.setParameters(p);
 
-                        if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {//请求超时
-                            try {
-                                // wait 10ms
-                                Thread.sleep(10);
-                            } catch (InterruptedException e) {
+                                Log.i(TAG, "request key frame");
+
+                                lastRequestKeyFrameUS = SystemClock.elapsedRealtimeNanos() / 1000;
                             }
-                        } else if (index >= 0) {//有效输出
-
-                            ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(index);
-
-
-                            byte[] outData = new byte[mBufferInfo.size];
-                            outputBuffer.get(outData);
-
-                            //                        String data0 = String.format("%x %x %x %x %x %x %x %x %x %x ", outData[0], outData[1], outData[2], outData[3], outData[4], outData[5], outData[6], outData[7], outData[8], outData[9]);
-                            //                        Log.e("out_data", data0);
-
-                            //记录pps和sps
-                            int type = outData[4] & 0x07;
-                            if (type == 7 || type == 8) {
-                                mPpsSps = outData;
-                            } else if (type == 5) {
-                                //在关键帧前面加上pps和sps数据
-                                if (mPpsSps != null) {
-                                    byte[] iframeData = new byte[mPpsSps.length + outData.length];
-                                    System.arraycopy(mPpsSps, 0, iframeData, 0, mPpsSps.length);
-                                    System.arraycopy(outData, 0, iframeData, mPpsSps.length, outData.length);
-                                    outData = iframeData;
-                                }
-                            }
-
-                            mEasyPusher.push(outData, mBufferInfo.presentationTimeUs / 1000, 1);
-
-
-                            mMediaCodec.releaseOutputBuffer(index, false);
                         }
 
+                        int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, 10000);
+                        Log.i(TAG, "dequeue output buffer outputBufferIndex=" + outputBufferIndex);
+
+                        if (outputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
+                            // no output available yet
+                        } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
+                            // not expected for an encoder
+                            outputBuffers = mMediaCodec.getOutputBuffers();
+                        } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                            //
+                        } else if (outputBufferIndex < 0) {
+                            // let's ignore it
+                        } else {
+                            ByteBuffer outputBuffer;
+
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                outputBuffer = mMediaCodec.getOutputBuffer(outputBufferIndex);
+                            } else {
+                                outputBuffer = outputBuffers[outputBufferIndex];
+                            }
+
+                            outputBuffer.position(bufferInfo.offset);
+                            outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
+
+                            try {
+                                boolean sync = false;
+
+                                if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {// sps
+                                    sync = (bufferInfo.flags & MediaCodec.BUFFER_FLAG_SYNC_FRAME) != 0;
+
+                                    if (!sync) {
+                                        byte[] temp = new byte[bufferInfo.size];
+                                        outputBuffer.get(temp);
+                                        mPpsSps = temp;
+                                        continue;
+                                    } else {
+                                        mPpsSps = new byte[0];
+                                    }
+                                }
+
+                                sync |= (bufferInfo.flags & MediaCodec.BUFFER_FLAG_SYNC_FRAME) != 0;
+                                int len = mPpsSps.length + bufferInfo.size;
+
+                                if (len > h264.length) {
+                                    h264 = new byte[len];
+                                }
+
+                                if (sync) {
+                                    System.arraycopy(mPpsSps, 0, h264, 0, mPpsSps.length);
+                                    outputBuffer.get(h264, mPpsSps.length, bufferInfo.size);
+                                    mEasyPusher.push(h264, 0, mPpsSps.length + bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 2);
+
+                                    if (BuildConfig.DEBUG)
+                                        Log.i(TAG, String.format("push i video stamp:%d", bufferInfo.presentationTimeUs / 1000));
+                                } else {
+                                    outputBuffer.get(h264, 0, bufferInfo.size);
+                                    mEasyPusher.push(h264, 0, bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
+
+                                    if (BuildConfig.DEBUG)
+                                        Log.i(TAG, String.format("push video stamp:%d", bufferInfo.presentationTimeUs / 1000));
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            } finally {
+                                // 将缓冲器返回到编解码器
+                                mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
+                            }
+                        }
                     }
-                }finally {
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                } finally {
                     audioStream.removePusher(mEasyPusher);
                 }
             }
