@@ -14,7 +14,6 @@ import org.easydarwin.bus.StreamStat;
 import static org.easydarwin.easypusher.EasyApplication.BUS;
 
 public class EasyPusher implements Pusher {
-    private static final String KEY = "6A36334A743536526D343041714E78636F794D77384F5A76636D63755A57467A65575268636E64706269356C59584E356348567A61475679567778576F4E6A7734456468646D6C754A6B4A68596D397A595541794D4445325257467A65555268636E6470626C526C5957316C59584E35";//BuildConfig.RTSP_KEY;
     private static String TAG = "EasyPusher";
 
     static {
@@ -96,8 +95,7 @@ public class EasyPusher implements Pusher {
     @Override
     public synchronized void initPush(Context context, final InitCallback callback) {
         Log.i(TAG, "PusherStart");
-        String key = KEY;
-        mPusherObj = init(key, context, new OnInitPusherCallback() {
+        mPusherObj = init("", context, new OnInitPusherCallback() {
             int code = Integer.MAX_VALUE;
             @Override
             public void onCallback(int code) {
