@@ -6,11 +6,8 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 26 // 确保在后台预览时不崩溃。。。
-        versionCode 21
-        versionName "1.3.17.0721"
-
-
-        buildConfigField 'String', 'RTSP_PUSHER_KEY', '\"6A36334A743536526D34324144474A636F35337A4A65686A623230755957356B636D39705A4335686348427361574E6864476C76626C634D5671442F70654E4659584E355247467964326C755647566862556C7A5647686C516D567A644541794D4445345A57467A65513D3D\"'
+        versionCode 13190817
+        versionName "1.3.19.0817"
     }
     buildTypes {
         release {

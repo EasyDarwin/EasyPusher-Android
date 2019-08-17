@@ -14,7 +14,6 @@ import org.easydarwin.easypusher.BuildConfig;
 
 
 public class EasyPusher implements Pusher {
-    private static final String KEY = BuildConfig.RTSP_PUSHER_KEY;
     private static String TAG = "EasyPusher";
 
     static {
@@ -95,8 +94,7 @@ public class EasyPusher implements Pusher {
     @Override
     public synchronized void initPush(Context context, final InitCallback callback) {
         Log.i(TAG, "PusherStart");
-        String key = KEY;
-        mPusherObj = init(key, context, new OnInitPusherCallback() {
+        mPusherObj = init("", context, new OnInitPusherCallback() {
             int code = Integer.MAX_VALUE;
             @Override
             public void onCallback(int code) {
