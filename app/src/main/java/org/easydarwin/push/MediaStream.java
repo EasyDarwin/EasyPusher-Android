@@ -116,23 +116,30 @@ public class MediaStream {
 
                 @Override
                 public void onPreviewFrame(byte[] data, Camera camera) {
-                    if (data == null) return;
-                    int cameraRotationOffset = camInfo.orientation;
-//                    if (mCameraId == Camera.CameraInfo.CAMERA_FACING_FRONT)
-//                        cameraRotationOffset += 180;
+                    if (data == null)
+                        return;
 
-                    if (i420_buffer == null || i420_buffer.length != data.length){
+                    int result;
+                    if (camInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                        result = (camInfo.orientation + mDgree) % 360;
+                    } else {  // back-facing
+                        result = (camInfo.orientation - mDgree + 360) % 360;
+                    }
+
+                    if (i420_buffer == null || i420_buffer.length != data.length) {
                         i420_buffer = new byte[data.length];
                     }
-                    JNIUtil.ConvertToI420(data, i420_buffer, width, height, 0, 0,  width, height, cameraRotationOffset%360, 2);
+
+                    JNIUtil.ConvertToI420(data, i420_buffer, width, height, 0, 0, width, height, result % 360, 2);
                     System.arraycopy(i420_buffer, 0, data, 0, data.length);
+
                     if (mRecordVC != null) {
                         mRecordVC.onVideo(i420_buffer, 0);
                     }
+
                     mVC.onVideo(data, 0);
                     mCamera.addCallbackBuffer(data);
                 }
-
             };
     }
 
@@ -403,17 +410,28 @@ public class MediaStream {
 
 
             mCamera.startPreview();
-            boolean frameRotate = false;
 
-            int cameraRotationOffset = camInfo.orientation;
-            if (mCameraId == Camera.CameraInfo.CAMERA_FACING_FRONT)
-                cameraRotationOffset += 180;
+//            boolean frameRotate = false;
+//            int cameraRotationOffset = camInfo.orientation;
+//            if (mCameraId == Camera.CameraInfo.CAMERA_FACING_FRONT)
+//                cameraRotationOffset += 180;
+//            if (cameraRotationOffset % 180 != 0) {
+//                frameRotate = true;
+//            }
+//            frameWidth = frameRotate ? height:width;
+//            frameHeight = frameRotate ? width:height;
 
-            if (cameraRotationOffset % 180 != 0) {
-                frameRotate = true;
+            boolean frameRotate;
+            int result;
+            if (camInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                result = (camInfo.orientation + mDgree) % 360;
+            } else {  // back-facing
+                result = (camInfo.orientation - mDgree + 360) % 360;
             }
-            frameWidth = frameRotate ? height:width;
-            frameHeight = frameRotate ? width:height;
+            frameRotate = result % 180 != 0;
+            frameWidth = frameRotate ? height : width;
+            frameHeight = frameRotate ? width : height;
+
             if (mSWCodec) {
                 mVC = new ClippableVideoConsumer(mApplicationContext, new SWConsumer(mApplicationContext, mEasyPusher), frameWidth, frameHeight);
             } else {
