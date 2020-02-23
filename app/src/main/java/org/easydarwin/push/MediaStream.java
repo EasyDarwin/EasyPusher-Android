@@ -432,11 +432,11 @@ public class MediaStream {
             frameWidth = frameRotate ? height : width;
             frameHeight = frameRotate ? width : height;
 
-            if (mSWCodec) {
+//            if (mSWCodec) {
                 mVC = new ClippableVideoConsumer(mApplicationContext, new SWConsumer(mApplicationContext, mEasyPusher), frameWidth, frameHeight);
-            } else {
-                mVC = new ClippableVideoConsumer(mApplicationContext, new HWConsumer(mApplicationContext, mEasyPusher), frameWidth, frameHeight);
-            }
+//            } else {
+//                mVC = new ClippableVideoConsumer(mApplicationContext, new HWConsumer(mApplicationContext, mEasyPusher), frameWidth, frameHeight);
+//            }
             mVC.onVideoStart(frameWidth, frameHeight);
         }
         audioStream.addPusher(mEasyPusher);
