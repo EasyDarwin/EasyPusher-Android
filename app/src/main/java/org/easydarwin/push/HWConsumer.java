@@ -170,7 +170,7 @@ public class HWConsumer extends Thread implements VideoConsumer {
                     if (sync) {
                         System.arraycopy(mPpsSps, 0, h264, 0, mPpsSps.length);
                         outputBuffer.get(h264, mPpsSps.length, bufferInfo.size);
-                        mPusher.push(h264, 0, mPpsSps.length + bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 1);
+                        mPusher.push(h264, 0, mPpsSps.length + bufferInfo.size, bufferInfo.presentationTimeUs / 1000, 2);
                         if (BuildConfig.DEBUG)
                             Log.i(TAG, String.format("push i video stamp:%d", bufferInfo.presentationTimeUs / 1000));
                     } else {
@@ -246,7 +246,7 @@ Video bitrate 384 Kbps 2 Mbps 4 Mbps 10 Mbps
             throw new IllegalStateException(e);
         }
         MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mWidth, mHeight);
-        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
+        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate + 3000);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, framerate);
         mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, info.mColorFormat);
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
