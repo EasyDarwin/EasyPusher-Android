@@ -71,7 +71,7 @@ public class MediaStream {
     private final Handler mCameraHandler;
     //    private int previewFormat;
     public static CodecInfo info = new CodecInfo();
-    private byte []i420_buffer;
+    private byte[] i420_buffer;
     private int frameWidth;
     private int frameHeight;
     private Camera.CameraInfo camInfo;
@@ -152,7 +152,7 @@ public class MediaStream {
     }
 
     public void startStream(String ip, String port, String id, InitCallback callback) {
-        mEasyPusher.initPush( mApplicationContext, callback);
+        mEasyPusher.initPush(mApplicationContext, callback);
         mEasyPusher.setMediaInfo(Pusher.Codec.EASY_SDK_VIDEO_CODEC_H264, 25, Pusher.Codec.EASY_SDK_AUDIO_CODEC_AAC, 1, 8000, 16);
         mEasyPusher.start(ip, port, String.format("%s.sdp", id), Pusher.TransType.EASY_RTP_OVER_TCP);
         pushStream = true;
@@ -231,13 +231,12 @@ public class MediaStream {
             parameters.setRecordingHint(true);
 
 
-
             ArrayList<CodecInfo> infos = listEncoders("video/avc");
             if (!infos.isEmpty()) {
                 CodecInfo ci = infos.get(0);
                 info.mName = ci.mName;
                 info.mColorFormat = ci.mColorFormat;
-            }else {
+            } else {
                 mSWCodec = true;
             }
 //            List<Camera.Size> sizes = parameters.getSupportedPreviewSizes();
@@ -432,11 +431,11 @@ public class MediaStream {
             frameWidth = frameRotate ? height : width;
             frameHeight = frameRotate ? width : height;
 
-//            if (mSWCodec) {
+            if (mSWCodec) {
                 mVC = new ClippableVideoConsumer(mApplicationContext, new SWConsumer(mApplicationContext, mEasyPusher), frameWidth, frameHeight);
-//            } else {
-//                mVC = new ClippableVideoConsumer(mApplicationContext, new HWConsumer(mApplicationContext, mEasyPusher), frameWidth, frameHeight);
-//            }
+            } else {
+                mVC = new ClippableVideoConsumer(mApplicationContext, new HWConsumer(mApplicationContext, mEasyPusher), frameWidth, frameHeight);
+            }
             mVC.onVideoStart(frameWidth, frameHeight);
         }
         audioStream.addPusher(mEasyPusher);

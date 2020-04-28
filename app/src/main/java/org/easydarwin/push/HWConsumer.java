@@ -41,7 +41,6 @@ public class HWConsumer extends Thread implements VideoConsumer {
         mPusher = pusher;
     }
 
-
     @Override
     public void onVideoStart(int width, int height) {
         newFormat = null;
@@ -58,7 +57,7 @@ public class HWConsumer extends Thread implements VideoConsumer {
         mVideoStarted = true;
     }
 
-    final int millisPerframe = 1000 / 20;
+    final int millisPerframe = 1000 / 30;
     long lastPush = 0;
 
     @Override
@@ -217,7 +216,7 @@ public class HWConsumer extends Thread implements VideoConsumer {
     /**
      * 初始化编码器
      */
-    private void startMediaCodec()  {
+    private void startMediaCodec() {
             /*
         SD (Low quality) SD (High quality) HD 720p
 1 HD 1080p
@@ -226,7 +225,7 @@ Video resolution 320 x 240 px 720 x 480 px 1280 x 720 px 1920 x 1080 px
 Video frame rate 20 fps 30 fps 30 fps 30 fps
 Video bitrate 384 Kbps 2 Mbps 4 Mbps 10 Mbps
         */
-        int framerate = 20;
+        int framerate = 30;
 //        if (width == 640 || height == 640) {
 //            bitrate = 2000000;
 //        } else if (width == 1280 || height == 1280) {
@@ -236,15 +235,21 @@ Video bitrate 384 Kbps 2 Mbps 4 Mbps 10 Mbps
 //        }
 
         int bitrate = (int) (mWidth * mHeight * 20 * 2 * 0.05f);
-        if (mWidth >= 1920 || mHeight >= 1920) bitrate *= 0.3;
-        else if (mWidth >= 1280 || mHeight >= 1280) bitrate *= 0.4;
-        else if (mWidth >= 720 || mHeight >= 720) bitrate *= 0.6;
+
+        if (mWidth >= 1920 || mHeight >= 1920)
+            bitrate *= 0.3;
+        else if (mWidth >= 1280 || mHeight >= 1280)
+            bitrate *= 0.4;
+        else if (mWidth >= 720 || mHeight >= 720)
+            bitrate *= 0.6;
+
         try {
             mMediaCodec = MediaCodec.createByCodecName(info.mName);
         } catch (IOException e) {
             e.printStackTrace();
             throw new IllegalStateException(e);
         }
+
         MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mWidth, mHeight);
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate + 3000);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, framerate);
@@ -267,5 +272,4 @@ Video bitrate 384 Kbps 2 Mbps 4 Mbps 10 Mbps
         mMediaCodec.stop();
         mMediaCodec.release();
     }
-
 }

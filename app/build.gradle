@@ -7,9 +7,9 @@ android {
     defaultConfig {
         applicationId "org.easydarwin.easypusher"
         minSdkVersion 19
-        targetSdkVersion 26 // 确保在后台预览时不崩溃。。。
-        versionCode 13200308
-        versionName '1.3.20.0308'
+        targetSdkVersion 26 // 确保在后台预览时不崩溃
+        versionCode 13200428
+        versionName '1.3.20.0428'
         testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
         flavorDimensions "versionCode"
     }

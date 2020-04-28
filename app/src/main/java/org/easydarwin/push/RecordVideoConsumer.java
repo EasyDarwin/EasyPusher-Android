@@ -18,8 +18,7 @@ public class RecordVideoConsumer implements VideoConsumerWrapper {
     public RecordVideoConsumer(Context context, boolean swCodec, EasyMuxer muxer) {
         this.context = context;
 
-//        consumer = swCodec ? new SWConsumer(context, null):new HWConsumer(context, null);
-        consumer = new SWConsumer(context, null);
+        consumer = swCodec ? new SWConsumer(context, null):new HWConsumer(context, null);
 
         consumer.setMuxer(muxer);
     }
